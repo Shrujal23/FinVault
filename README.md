@@ -83,7 +83,7 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/finvault.git
+git clone https://github.com/YOUR_USERNAME/finvault.git
 cd finvault
 ```
 
@@ -323,9 +323,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👤 Author
 
-**Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
+Developed as a portfolio project to demonstrate full-stack development skills with Spring Boot and React.
 
 ## 🙏 Acknowledgments
 
@@ -336,12 +334,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📸 Screenshots
 
-_Add screenshots of your application here_
-
-- Dashboard view
-- Portfolio overview
-- Asset management
-- Performance charts
+Screenshots coming soon. The application features:
+- Professional dashboard with portfolio overview
+- Real-time asset management interface
+- Interactive performance charts
+- Responsive design for all devices
 
 ---
 

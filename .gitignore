@@ -37,3 +37,6 @@ server-spring/src/main/resources/application.properties
 # Temporary files
 *.tmp
 *.temp
+
+# Setup guides (not needed in repo)
+GITHUB_SETUP.md
