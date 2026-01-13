@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+server-spring/target/
+server-spring/.mvn/
+.mvn/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+client/dist/
+client/build/
+*.jar
+!server-spring/pom.xml
+
+# Sensitive configuration (keep example file)
+server-spring/src/main/resources/application.properties
+
+# Temporary files
+*.tmp
+*.temp

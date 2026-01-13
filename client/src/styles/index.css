@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+
+/* Dark mode pitch black */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+html.dark {
+  --color-gray-900: #000000;
+  --color-gray-800: #111111;
+  --color-gray-700: #000000;
+  --color-gray-600: #000000;
+}
+
+/* Hide native browser password reveal/clear icons so only the app's eye toggle is visible */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-textfield-decoration-button,
+input[type="password"]::-webkit-contacts-auto-fill-button,
+input[type="password"]::-webkit-clear-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+/* Ensure consistent masking where supported */
+input[type="password"] {
+  -webkit-text-security: disc;
+}
