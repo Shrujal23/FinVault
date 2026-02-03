@@ -280,9 +280,43 @@ export default function Dashboard({ auth }) {
         </div> 
 
         {error && (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5" />
-            {error}
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              <span className="font-medium">We couldn&apos;t load your portfolio.</span>
+            </div>
+            <span className="text-sm opacity-90">{error}</span>
+          </div>
+        )}
+
+        {/* Onboarding empty state when no assets */}
+        {!loading && !error && (!metrics || !metrics.items?.length) && (
+          <div className="bg-white dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
+                Welcome to FinVault
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                Get started by adding your first asset. We&apos;ll calculate your portfolio value, P&amp;L, and allocation automatically.
+              </p>
+              <ul className="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1">
+                <li>Track stocks, mutual funds, and crypto in one place</li>
+                <li>See real-time gains and losses</li>
+                <li>Visualize your diversification and performance</li>
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.querySelector('#add-asset-section');
+                if (el && typeof el.scrollIntoView === 'function') {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              className="px-5 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white font-medium text-sm whitespace-nowrap"
+            >
+              Add your first asset
+            </button>
           </div>
         )}
 
@@ -328,7 +362,7 @@ export default function Dashboard({ auth }) {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+            <div id="add-asset-section" className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6">
               <div className="flex items-center gap-3 mb-6">
                 <PlusCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                 <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Add New Asset</h2>

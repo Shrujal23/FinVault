@@ -78,8 +78,80 @@ export default function AssetTable({ rows = [], onChange, token, hoveredSymbol, 
         />
       </div>
 
-      {/* Responsive Table Container */}
-      <div className="overflow-x-auto rounded-xl border dark:border-gray-700 shadow-lg">
+      {/* Mobile Card View */}
+      <div className="space-y-3 mb-6 md:hidden">
+        {view.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-center text-sm text-slate-600 dark:text-slate-400">
+            No assets yet. Add your first holding with the &quot;Add New Asset&quot; form below.
+          </div>
+        ) : (
+          view.map((a) => {
+            const isSelected = hoveredSymbol === a.symbol || selectedSymbol === a.symbol;
+            return (
+              <div
+                key={a.id}
+                className={`rounded-lg border bg-white dark:bg-slate-900 p-4 flex flex-col gap-2 ${
+                  isSelected ? 'border-slate-400 dark:border-slate-500' : 'border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-white">{a.symbol}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[180px]">
+                      {a.name}
+                    </div>
+                  </div>
+                  <div className="text-right text-xs text-slate-500 dark:text-slate-400">
+                    Qty&nbsp;
+                    <span className="font-mono text-slate-800 dark:text-slate-100">
+                      {formatNum(a.quantity)}
+                    </span>
+                  </div>
+                </div>
+                {hasPriceData && (
+                  <div className="flex justify-between items-center text-xs mt-1">
+                    <div className="text-slate-500 dark:text-slate-400">
+                      Mkt Value:&nbsp;
+                      <span className="font-mono text-slate-900 dark:text-slate-100">
+                        ₹{formatNum(a.marketValue)}
+                      </span>
+                    </div>
+                    <div
+                      className={`font-mono ${
+                        a.pnl >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-red-700 dark:text-red-500'
+                      }`}
+                    >
+                      ₹{formatNum(a.pnl)} ({a.returnPct >= 0 ? '+' : ''}
+                      {formatNum(a.returnPct)}%)
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-end gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(a)}
+                    className="text-xs px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200"
+                    aria-label={`Edit ${a.symbol}`}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startDelete(a)}
+                    className="text-xs px-3 py-1 rounded-md bg-red-600 text-white"
+                    aria-label={`Delete ${a.symbol}`}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Responsive Table Container (desktop / tablet) */}
+      <div className="overflow-x-auto rounded-xl border dark:border-gray-700 shadow-lg hidden md:block">
         <table aria-label="Assets table" className="w-full min-w-[850px] text-sm bg-white dark:bg-slate-900">
           <thead className="bg-gray-50 dark:bg-slate-800 text-xs font-medium uppercase text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 ">
             <tr>
