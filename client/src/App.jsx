@@ -3,6 +3,8 @@ import Navbar from './components/Navbar.jsx';
 import AuthPage from './pages/Auth.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import AboutUs from './components/AboutUs.jsx';
+import DividendMonitor from './pages/DividendMonitor.jsx';
+import Billing from './pages/Billing.jsx';
 import ContactPage from './pages/ContactPage.jsx';
 import Footer from './components/Footer.jsx';
 import ResetPasswordForm from './components/ResetPasswordForm.jsx';
@@ -167,6 +169,14 @@ export default function App() {
 
     if (currentPage === 'about') {
       return <AboutUs setCurrentPage={setCurrentPage} />;
+    }
+
+    if (currentPage === 'dividends') {
+      return <DividendMonitor auth={auth} />;
+    }
+
+    if (currentPage === 'billing') {
+      return <Billing auth={auth} setCurrentPage={setCurrentPage} />;
     }
 
     if (currentPage === 'contact') {
