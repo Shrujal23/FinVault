@@ -8,6 +8,10 @@ A full-stack financial portfolio management application that enables users to tr
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+## AI Assistance
+
+Some portions of this project were created or modified with the assistance of AI tools. Generated code and text were reviewed and tested by the project maintainers, but may require additional verification before use in production. If you discover issues, please report them in the issue tracker.
+
 ## 🚀 Features
 
 ### Core Functionality
