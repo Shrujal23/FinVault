@@ -30,7 +30,7 @@ const settingsItems = [
   { id: 'link_broker', icon: Link, title: 'Link Broker Account', description: 'Sync live holdings & enable automated tracking', action: 'brokers', chevron: true },
   { id: 'notifications', icon: Bell, title: 'Notifications', description: 'Manage alerts for price changes' },
   { id: 'security', icon: Shield, title: 'Security', description: 'Two-factor auth & password' },
-  { id: 'billing', icon: CreditCard, title: 'Billing', description: 'Manage subscription' },
+  { id: 'billing', icon: CreditCard, title: 'Billing', description: 'Manage subscription', action: 'billing' },
 ];
 
 const usBrokers = [
@@ -68,7 +68,7 @@ const BrokerGridItem = ({ name, logo }) => (
   </div>
 );
 
-const SettingsModalContent = ({ onClose, auth }) => {
+const SettingsModalContent = ({ onClose, auth, setCurrentPage }) => {
   const [activeSection, setActiveSection] = useState('main');
   const { theme, toggleTheme } = useTheme();
 
@@ -159,11 +159,27 @@ const SettingsModalContent = ({ onClose, auth }) => {
           <div className="p-6 space-y-2 max-h-96 overflow-y-auto">
             {settingsItems.map(item => {
               const Icon = item.icon;
+              const handleClick = () => {
+                // Brokers opens internal section
+                if (item.action === 'brokers') {
+                  setActiveSection('brokers');
+                  return;
+                }
+                // Billing should navigate to a full page and close modal
+                if (item.action === 'billing') {
+                  onClose();
+                  setCurrentPage('billing');
+                  return;
+                }
+
+                if (item.action) setActiveSection(item.action);
+              };
+
               return (
                 <button
                   type="button"
                   key={item.id}
-                  onClick={() => item.action && setActiveSection(item.action)}
+                  onClick={handleClick}
                   aria-label={`Open ${item.title}`}
                   className="w-full flex items-center gap-4 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-200 group"
                 >
@@ -279,6 +295,7 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
 
   const navItems = [
     { id: "home", label: "Dashboard", icon: Home },
+    { id: "dividends", label: "Dividends", icon: CreditCard },
     { id: "about", label: "About", icon: Info },
     { id: "contact", label: "Contact Us", icon: Mail },
   ];
@@ -470,7 +487,7 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
       )}
 
       {/* Settings Modal */}
-      {showSettings && <SettingsModalContent onClose={() => setShowSettings(false)} auth={auth} />}
+      {showSettings && <SettingsModalContent onClose={() => setShowSettings(false)} auth={auth} setCurrentPage={setCurrentPage} />}
     </>
   );
 }
