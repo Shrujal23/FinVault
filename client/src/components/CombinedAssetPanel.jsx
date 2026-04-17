@@ -17,13 +17,13 @@ export default function CombinedAssetPanel({ rows = [], allocation = [], token, 
   return (
     <div className="w-full">
       {/* Controls */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="transition-opacity duration-200">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6 min-w-0">
+        <div className="transition-opacity duration-200 min-w-0">
           <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Holdings & Allocation</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">View your portfolio distribution and holdings together for quick insights.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
             aria-pressed={view === 'split'}

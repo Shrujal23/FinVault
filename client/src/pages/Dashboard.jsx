@@ -101,6 +101,17 @@ export default function Dashboard({ auth }) {
   }, [metrics]);
 
   const userName = user?.name || user?.email?.split('@')[0] || 'Investor';
+  const portfolioHealth = !metrics
+    ? 'Sync your portfolio to see insights'
+    : metrics.returnPct >= 8
+      ? 'Strong growth trend'
+      : metrics.returnPct >= 0
+        ? 'Stable positive trend'
+        : 'Recovery mode - review allocations';
+  const reviewDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
 
   // Selection state used to link movers <-> holdings table
   const [selectedSymbol, setSelectedSymbol] = useState(null);
@@ -241,26 +252,30 @@ export default function Dashboard({ auth }) {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-blue-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 pb-12">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div>
-            <h1 className="text-4xl font-bold text-slate-900 dark:text-white">
-              Welcome back, <span className="text-slate-700 dark:text-slate-300">{userName}</span>!
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl p-6 sm:p-8 shadow-lg shadow-slate-200/40 dark:shadow-black/20">
+          <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-cyan-400/10 dark:bg-cyan-500/10 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -left-12 w-56 h-56 rounded-full bg-indigo-400/10 dark:bg-indigo-500/10 blur-3xl pointer-events-none" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-400 font-semibold">Portfolio Command Center</p>
+            <h1 className="text-4xl font-bold text-slate-900 dark:text-white mt-1">
+              Welcome back, <span className="bg-gradient-to-r from-cyan-500 to-indigo-600 bg-clip-text text-transparent">{userName}</span>
             </h1>
-            <p className="mt-2 text-lg text-slate-600 dark:text-slate-400">
+            <p className="mt-2 text-lg text-slate-600 dark:text-slate-300">
               Here's your portfolio overview • {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 shrink-0">
             <button
               type="button"
               aria-pressed={compactMode}
               onClick={() => setCompactMode(prev => { const v = !prev; localStorage.setItem('dashboard.compact', v ? 'true' : 'false'); return v; })}
               aria-label={compactMode ? "Compact view: on" : "Compact view: off"}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${compactMode ? 'bg-slate-700 dark:bg-slate-600 text-white border-slate-700 dark:border-slate-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${compactMode ? 'bg-slate-700 dark:bg-slate-600 text-white border-slate-700 dark:border-slate-600' : 'bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
             >
               <Target className="w-4 h-4" />
               <span className="font-medium">{compactMode ? 'Compact' : 'Expanded'}</span>
@@ -271,13 +286,14 @@ export default function Dashboard({ auth }) {
               aria-label="Refresh dashboard"
               onClick={refreshData}
               disabled={isRefreshing}
-              className="flex items-center gap-3 px-6 py-2.5 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-3 px-6 py-2.5 bg-white/90 dark:bg-slate-800/90 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="font-medium">Refresh</span>
             </button>
           </div>
-        </div> 
+        </div>
+        </div>
 
         {error && (
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
@@ -288,6 +304,66 @@ export default function Dashboard({ auth }) {
             <span className="text-sm opacity-90">{error}</span>
           </div>
         )}
+
+        {/* Home quick insights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+              <PieChart className="w-4 h-4" />
+              <p className="text-sm font-medium">Portfolio Health</p>
+            </div>
+            <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">{portfolioHealth}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Based on total return and current holdings mix.
+            </p>
+          </div>
+
+          <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+              <History className="w-4 h-4" />
+              <p className="text-sm font-medium">Next Review</p>
+            </div>
+            <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">{reviewDate}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Weekly check-in helps keep your strategy on track.
+            </p>
+          </div>
+
+          <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+              <Target className="w-4 h-4" />
+              <p className="text-sm font-medium">Quick Actions</p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.querySelector('#add-asset-section');
+                  if (el && typeof el.scrollIntoView === 'function') {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500"
+              >
+                Add Asset
+              </button>
+              <button
+                type="button"
+                onClick={refreshData}
+                className="px-3 py-1.5 rounded-md text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Refresh Data
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBrokerModal(true)}
+                className="px-3 py-1.5 rounded-md text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Link Broker
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Onboarding empty state when no assets */}
         {!loading && !error && (!metrics || !metrics.items?.length) && (
@@ -335,8 +411,8 @@ export default function Dashboard({ auth }) {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
           {/* Left Column */}
           <div className="xl:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-              <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden min-w-0">
+              <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <Wallet className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                   <h2 className="text-xl font-semibold text-slate-800 dark:text-white">My Holdings</h2>
@@ -345,7 +421,7 @@ export default function Dashboard({ auth }) {
                   {metrics?.items?.length || 0} assets
                 </span>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6 min-w-0 overflow-x-auto">
                 {loading ? <TableSkeleton /> : (
                   <CombinedAssetPanel
                     rows={metrics?.items || []}
@@ -362,7 +438,7 @@ export default function Dashboard({ auth }) {
               </div>
             </div>
 
-            <div id="add-asset-section" className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+            <div id="add-asset-section" className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 sm:p-6 min-w-0">
               <div className="flex items-center gap-3 mb-6">
                 <PlusCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                 <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Add New Asset</h2>
@@ -374,7 +450,7 @@ export default function Dashboard({ auth }) {
           {/* Right Sidebar */}
           <div className="space-y-6">
             {/* Linked Accounts */}
-            <div className="bg-slate-700 dark:bg-slate-800 rounded-lg shadow-sm border border-slate-600 dark:border-slate-700 p-6 text-white flex flex-col justify-between h-full">
+            <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-blue-900 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 rounded-xl shadow-lg border border-slate-700/70 dark:border-slate-700 p-6 text-white flex flex-col justify-between h-full">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <Link className="w-6 h-6" />
@@ -415,7 +491,7 @@ export default function Dashboard({ auth }) {
 
 
             {/* Top Movers */}
-            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6 h-full flex flex-col justify-between">
+            <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 h-full flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-6">
                   <TrendingUp className="w-5 h-5 text-slate-600 dark:text-slate-400" />
@@ -441,7 +517,7 @@ export default function Dashboard({ auth }) {
             </div>
 
             {/* Market News */}
-            <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6 h-full flex flex-col justify-between">
+            <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 h-full flex flex-col justify-between">
               <div className="flex items-center gap-3 mb-6">
                 <Newspaper className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                 <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Market News</h2>
@@ -455,11 +531,11 @@ export default function Dashboard({ auth }) {
 
         {/* Bottom Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+          <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6">
             <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-6">Performance Over Time</h2>
             {token && <PerformanceChart token={token} />}
           </div>
-          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+          <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6">
             <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-6">Watchlist</h2>
             {token && <Watchlist token={token} />}
           </div>

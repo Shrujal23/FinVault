@@ -4,6 +4,11 @@
 
 html, body, #root { height: 100%; }
 
+body {
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Dark mode pitch black */
 @media (prefers-color-scheme: dark) {
   :root {

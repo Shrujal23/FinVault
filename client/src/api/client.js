@@ -31,6 +31,11 @@ export async function apiRequest(path, { method = 'GET', body, token: inputToken
             throw new Error('Unauthorized/Forbidden: Token missing, invalid, or expired.');
         }
 
+        if (res.status === 429) {
+            const detail = err?.message || err?.error || 'Too many requests. Please wait a minute and try again.';
+            throw new Error(detail);
+        }
+
         throw new Error(err?.error || `Request failed: ${res.status}`);
     }
 

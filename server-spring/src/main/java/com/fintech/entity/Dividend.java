@@ -1,6 +1,6 @@
 package com.fintech.entity;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity

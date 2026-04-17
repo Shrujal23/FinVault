@@ -30,6 +30,17 @@ jwt.secret=YOUR_JWT_SECRET_KEY_HERE
 jwt.expiration=7d
 
 # =======================
+# Rate limiting (per client IP, fixed 1-minute windows)
+# =======================
+rate-limit.enabled=true
+# Stricter bucket for /api/auth/** (login, register, password reset, etc.)
+rate-limit.auth-requests-per-minute=25
+# All other /api/** requests (authenticated portfolio, search, etc.)
+rate-limit.general-requests-per-minute=200
+# Set true only behind a trusted reverse proxy that sets X-Forwarded-For correctly
+rate-limit.trust-x-forwarded-for=false
+
+# =======================
 # CORS Configuration
 # =======================
 cors.allowed-origins=http://localhost:5173,http://localhost:5174

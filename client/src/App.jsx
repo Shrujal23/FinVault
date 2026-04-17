@@ -6,6 +6,7 @@ import AboutUs from './components/AboutUs.jsx';
 import DividendMonitor from './pages/DividendMonitor.jsx';
 import Billing from './pages/Billing.jsx';
 import ContactPage from './pages/ContactPage.jsx';
+import SettingsPage from './pages/SettingsPage.jsx';
 import Footer from './components/Footer.jsx';
 import ResetPasswordForm from './components/ResetPasswordForm.jsx';
 
@@ -179,6 +180,11 @@ export default function App() {
       return <Billing auth={auth} setCurrentPage={setCurrentPage} />;
     }
 
+    if (currentPage === 'settings') {
+      if (!token) return <AuthPage auth={auth} />;
+      return <SettingsPage auth={auth} setCurrentPage={setCurrentPage} />;
+    }
+
     if (currentPage === 'contact') {
       return <ContactPage setCurrentPage={setCurrentPage} />; // optional: pass setCurrentPage if needed
     }
@@ -194,8 +200,8 @@ export default function App() {
         setCurrentPage={setCurrentPage} 
         currentPage={currentPage} 
       />
-      <main className="flex-grow">
-        <div className="max-w-7xl mx-auto w-full px-4 py-8">
+      <main className="flex-grow w-full min-w-0">
+        <div className="max-w-7xl mx-auto w-full min-w-0 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
           {renderPage()}
         </div>
       </main>

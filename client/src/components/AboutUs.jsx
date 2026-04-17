@@ -1,84 +1,117 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Shield, Activity, Users, Sparkles, Target, Mail } from 'lucide-react';
+
+const pillars = [
+  {
+    icon: Shield,
+    title: 'Security first',
+    body: 'JWT-based sessions, hashed passwords, and stateless APIs designed so your account stays yours.',
+  },
+  {
+    icon: Activity,
+    title: 'Live portfolio pulse',
+    body: 'Holdings, allocation, movers, and market context in one command center—built for quick decisions.',
+  },
+  {
+    icon: Users,
+    title: 'Clarity for every investor',
+    body: 'From first asset to a diversified book—FinVault stays readable on phone, tablet, and desktop.',
+  },
+];
+
+const stats = [
+  { label: 'Asset classes', value: 'Stocks · MF · Crypto' },
+  { label: 'Focus', value: 'India & global data' },
+  { label: 'Experience', value: 'Dark / light ready' },
+];
 
 export default function AboutUs({ setCurrentPage }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
-          {/* Hero Section */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 px-10 py-16 text-center">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4">
-              About FinTech Portfolio
-            </h1>
-            <p className="text-xl md:text-2xl text-blue-100 font-medium">
-              Your Trusted Partner in Financial Growth
-            </p>
-          </div>
+    <div className="min-h-screen pb-8 sm:pb-12">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 text-white shadow-2xl">
+        <div className="absolute inset-0 opacity-40 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cyan-500/30 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-950/80 to-transparent pointer-events-none" />
 
-          {/* Content */}
-          <div className="px-10 py-12 space-y-10">
-            <section className="text-center max-w-3xl mx-auto">
-              <p className="text-lg md:text-xl text-gray-700 dark:text-gray-300 leading-relaxed">
-                Welcome to <span className="font-bold text-blue-600 dark:text-blue-400">FinTech Portfolio</span> — a modern, secure, and intuitive platform built to empower you with complete control and clarity over your investments.
-              </p>
-            </section>
+        <div className="relative px-5 sm:px-8 md:px-12 py-10 sm:py-14 md:py-16 text-center md:text-left">
+          <p className="text-xs sm:text-sm font-semibold tracking-[0.2em] text-cyan-300 uppercase mb-3">About FinVault</p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight max-w-3xl mx-auto md:mx-0">
+            The portfolio workspace for people who want <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-indigo-300">signal, not noise</span>.
+          </h1>
+          <p className="mt-4 text-base sm:text-lg text-slate-300 max-w-2xl mx-auto md:mx-0 leading-relaxed">
+            FinVault brings together positions, performance, dividends, and market headlines so you can see your full picture—whether you check in once a day or once a quarter.
+          </p>
 
-            <div className="grid md:grid-cols-3 gap-8 my-12">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                  <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Bank-Level Security</h3>
-                <p className="text-gray-600 dark:text-gray-400">Your data is protected with industry-leading encryption and security practices.</p>
-              </div>
-
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                  <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Real-Time Insights</h3>
-                <p className="text-gray-600 dark:text-gray-400">Track performance, diversification, and growth with up-to-date data and analytics.</p>
-              </div>
-
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                  <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0V4a2 2 0 012-2h4a2 2 0 012 2v14m-8 0h8" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">User-First Design</h3>
-                <p className="text-gray-600 dark:text-gray-400">Clean, intuitive interface that works seamlessly whether you're a beginner or expert.</p>
-              </div>
-            </div>
-
-            <section className="max-w-4xl mx-auto space-y-6 text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
-              <p>
-                We believe that managing your wealth shouldn't be complicated. That's why FinTech Portfolio combines powerful financial tools with a simple, elegant experience — helping you stay informed, confident, and in control.
-              </p>
-              <p>
-                Whether you're tracking stocks, crypto, mutual funds, or a diversified portfolio, our platform grows with you, offering the insights you need to make smarter decisions and reach your financial goals faster.
-              </p>
-              <p className="font-medium text-center text-xl text-gray-800 dark:text-gray-200 pt-6">
-                Join thousands of users who trust FinTech Portfolio to manage their financial future.
-              </p>
-            </section>
-
-            {/* Back Button */}
-            <div className="text-center pt-8">
-              <button
-                onClick={() => setCurrentPage('home')}
-                className="inline-flex items-center gap-3 px-8 py-4 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-              >
-                <ArrowLeft className="w-6 h-6" />
-                Back to Home
-              </button>
-            </div>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+            <button
+              type="button"
+              onClick={() => setCurrentPage('home')}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white text-slate-900 px-6 py-3.5 text-sm sm:text-base font-semibold shadow-lg hover:bg-slate-100 transition"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back to home
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentPage('contact')}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-3.5 text-sm sm:text-base font-semibold text-white hover:bg-white/10 transition"
+            >
+              <Mail className="w-5 h-5" />
+              Contact us
+            </button>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto mt-8 sm:mt-10 space-y-8 sm:space-y-10 px-0">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 px-4 py-4 text-center sm:text-left shadow-sm"
+            >
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{s.label}</p>
+              <p className="mt-1 text-sm sm:text-base font-semibold text-slate-900 dark:text-white">{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-6 sm:p-8 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 text-cyan-700 dark:text-cyan-400">
+              <Target className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Our mission</h2>
+              <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed">
+                Wealth tools should feel as serious as a banking app and as simple as a notebook. We build FinVault so you can track what you own, understand how it moves, and act when you choose—without drowning in spreadsheets or ten different broker apps.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className="flex items-center gap-2 mb-4 sm:mb-6">
+            <Sparkles className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">What we care about</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+            {pillars.map(({ icon: Icon, title, body }) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-6 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-cyan-700 dark:text-cyan-400">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <footer className="text-center sm:text-left text-sm text-slate-500 dark:text-slate-400 pb-2">
+          FinVault is a portfolio companion for learning and organization, not personalized investment advice. Always do your own research before making financial decisions.
+        </footer>
       </div>
     </div>
   );
