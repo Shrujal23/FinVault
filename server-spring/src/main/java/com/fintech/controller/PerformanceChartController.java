@@ -16,25 +16,28 @@ import java.util.*;
 @RequestMapping("/api/performance")
 public class PerformanceChartController {
 
+    private static final double BASE_PORTFOLIO_VALUE = 100000.0;
+    private static final double DAILY_VOLATILITY = 0.04;  // +/- 2%
+    private static final double DAILY_GAIN = 1.0003;      // 0.03% daily gain
+    private static final int PERFORMANCE_DAYS = 30;
+    private static final String DATE_FORMAT = "yyyy-MM-dd";
+    private static final long RANDOM_SEED = 12345;
+
     @Autowired
     private AssetService assetService;
 
     @Autowired
     private JwtUtils jwtUtils;
 
-    // ---------------------- Get Performance Chart Data ----------------------
     @GetMapping("/chart")
     public ResponseEntity<?> getPerformanceChart(@RequestHeader(value = "Authorization", required = false) String token) {
-        System.out.println("[PerformanceChartController.getPerformanceChart] Received token: " + (token != null ? token.substring(0, Math.min(30, token.length())) + "..." : "null"));
-        
-        if (token == null || token.isBlank()) {
-            System.out.println("[PerformanceChartController.getPerformanceChart] Authorization header missing");
+        // Validate token
+        if (!isTokenValid(token)) {
             return ResponseEntity.status(401).body(Map.of("error", "Authorization header missing"));
         }
 
+        // Get user from token
         Optional<User> userOpt = jwtUtils.getUserFromToken(token);
-        System.out.println("[PerformanceChartController.getPerformanceChart] getUserFromToken result: " + (userOpt.isPresent() ? "User found: " + userOpt.get().getEmail() : "User NOT found"));
-        
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid or missing token"));
         }
@@ -42,68 +45,93 @@ public class PerformanceChartController {
         try {
             User user = userOpt.get();
             List<Asset> assets = assetService.getAssetsByUser(user);
-            
-            // Generate 30 days of mock performance data
             List<Map<String, Object>> chartData = generatePerformanceData(assets);
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("data", chartData);
-            response.put("currency", "INR");
-            response.put("period", "30_DAYS");
-
-            System.out.println("[PerformanceChartController.getPerformanceChart] Chart data generated for user: " + user.getEmail());
+            Map<String, Object> response = buildResponse(chartData);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            System.out.println("[PerformanceChartController.getPerformanceChart] Error: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
-    // Generate 30 days of mock performance data with realistic trends
+    private boolean isTokenValid(String token) {
+        return token != null && !token.isBlank();
+    }
+
+    private Map<String, Object> buildResponse(List<Map<String, Object>> chartData) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", chartData);
+        response.put("currency", "INR");
+        response.put("period", "30_DAYS");
+        return response;
+    }
+
     private List<Map<String, Object>> generatePerformanceData(List<Asset> assets) {
+        double initialValue = calculateInitialPortfolioValue(assets);
         List<Map<String, Object>> data = new ArrayList<>();
         
-        // Calculate initial portfolio value
-        double initialValue = 100000.0;  // Starting with 100k as base
-        for (Asset asset : assets) {
-            if (asset.getQuantity() != null && asset.getAvgBuyPrice() != null) {
-                initialValue += asset.getQuantity().doubleValue() * asset.getAvgBuyPrice().doubleValue();
-            }
-        }
-        
-        // Generate last 30 days of data
         LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(29);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate startDate = endDate.minusDays(PERFORMANCE_DAYS - 1);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT);
         
-        double currentValue = initialValue;
-        double maxValue = initialValue;
-        double minValue = initialValue;
-        Random random = new Random(12345);  
+        PerformanceCalculator calculator = new PerformanceCalculator(initialValue);
         
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            // Generate realistic market movement: -2% to +2% daily
-            double changePercent = (random.nextDouble() - 0.5) * 0.04;
-            currentValue = currentValue * (1 + changePercent);
-            
-            
-            currentValue = currentValue * 1.0003;
-            
-            maxValue = Math.max(maxValue, currentValue);
-            minValue = Math.min(minValue, currentValue);
-            
-            Map<String, Object> entry = new HashMap<>();
-            entry.put("date", date.format(formatter));
-            entry.put("value", Math.round(currentValue * 100.0) / 100.0);  
-            entry.put("change", Math.round((currentValue - initialValue) / initialValue * 10000.0) / 100.0);  // % change
+            calculator.updateValue();
+            Map<String, Object> entry = createDataEntry(date, formatter, calculator);
             data.add(entry);
         }
         
-        System.out.println("[PerformanceChartController] Generated " + data.size() + " days of performance data");
-        System.out.println("[PerformanceChartController] Portfolio value range: ₹" + Math.round(minValue) + " - ₹" + Math.round(maxValue));
-        
         return data;
+    }
+
+    private double calculateInitialPortfolioValue(List<Asset> assets) {
+        double value = BASE_PORTFOLIO_VALUE;
+        
+        for (Asset asset : assets) {
+            if (asset.getQuantity() != null && asset.getAvgBuyPrice() != null) {
+                double assetValue = asset.getQuantity().doubleValue() * asset.getAvgBuyPrice().doubleValue();
+                value += assetValue;
+            }
+        }
+        
+        return value;
+    }
+
+    private Map<String, Object> createDataEntry(LocalDate date, DateTimeFormatter formatter, 
+                                                  PerformanceCalculator calculator) {
+        Map<String, Object> entry = new HashMap<>();
+        entry.put("date", date.format(formatter));
+        entry.put("value", calculator.getCurrentValue());
+        entry.put("change", calculator.getPercentageChange());
+        return entry;
+    }
+
+    // Helper class to encapsulate performance calculations
+    private class PerformanceCalculator {
+        private final double initialValue;
+        private double currentValue;
+
+        public PerformanceCalculator(double initialValue) {
+            this.initialValue = initialValue;
+            this.currentValue = initialValue;
+        }
+
+        public void updateValue() {
+            Random random = new Random(RANDOM_SEED);
+            double changePercent = (random.nextDouble() - 0.5) * DAILY_VOLATILITY;
+            currentValue = currentValue * (1 + changePercent);
+            currentValue = currentValue * DAILY_GAIN;
+        }
+
+        public double getCurrentValue() {
+            return Math.round(currentValue * 100.0) / 100.0;
+        }
+
+        public double getPercentageChange() {
+            double change = (currentValue - initialValue) / initialValue * 10000.0;
+            return Math.round(change) / 100.0;
+        }
     }
 }

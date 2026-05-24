@@ -20,10 +20,14 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/search")
 public class SearchController {
 
+    private static final Logger logger = LoggerFactory.getLogger(SearchController.class);
+    private static final int MIN_QUERY_LENGTH = 2;
+    private static final int MAX_RESULTS = 10;
+    private static final int QUOTE_LIMIT = 8;
+
     @Autowired
     private JwtUtils jwtUtils;
     
-    private static final Logger logger = LoggerFactory.getLogger(SearchController.class);
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -36,14 +40,12 @@ public class SearchController {
     @Value("${coingecko.api-key:}")
     private String coingeckoApiKey;
 
-    // AlphaVantage fallback/search
     @Value("${alphavantage.base:https://www.alphavantage.co/query}")
     private String alphavantageBase;
 
     @Value("${alphavantage.api-key:}")
     private String alphavantageApiKey;
 
-    // Yahoo free endpoints (search + quote)
     @Value("${yahoo.search-base:https://query2.finance.yahoo.com}")
     private String yahooSearchBase;
 
@@ -70,68 +72,61 @@ public class SearchController {
         
         logger.info("Stock search requested with query: '{}'", query);
         
-        if (token == null || token.isBlank()) {
-            logger.warn("Authorization header missing");
-            return ResponseEntity.status(401).body(Map.of("error", "Authorization header missing"));
+        List<Map<String, Object>> results = searchStocksFromApis(query);
+        logger.info("Found {} results for query: '{}'", results.size(), query);
+        
+        return ResponseEntity.ok(Map.of("results", results));
+    }
+
+    private List<Map<String, Object>> searchStocksFromApis(String query) {
+        // Try Yahoo first
+        List<Map<String, Object>> results = searchYahoo(query);
+        if (!results.isEmpty()) {
+            return results;
         }
 
-        Optional<User> userOpt = jwtUtils.getUserFromToken(token);
-        if (userOpt.isEmpty()) {
-            logger.warn("Invalid token received");
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid or missing token"));
+        // Try NSE
+        results = searchNSE(query);
+        if (!results.isEmpty()) {
+            return results;
+        }
+
+        // Try AlphaVantage directly
+        results = searchAlphaVantage(query);
+        if (!results.isEmpty()) {
+            return results;
+        }
+
+        // Fallback to static data
+        return getFallbackStocks(query);
+    }
+
+    private List<Map<String, Object>> searchAlphaVantage(String query) {
+        List<Map<String, Object>> results = new ArrayList<>();
+        if (isInvalidQuery(query)) {
+            return results;
         }
 
         try {
-            // Try Yahoo search first (free, no key required)
-            List<Map<String, Object>> apiResults = searchYahoo(query);
-            if (apiResults.isEmpty()) {
-                // Try NSE and fallbacks as before
-                apiResults = searchNSE(query);
-            }
+            String url = buildAlphaVantageSearchUrl(query);
+            String response = restTemplate.getForObject(url, String.class);
 
-            // If still empty, attempt AlphaVantage directly and log responses for debugging
-            if (apiResults.isEmpty()) {
-                logger.debug("No results from Yahoo/NSE for '{}', attempting AlphaVantage direct search.", query);
-                try {
-                    List<Map<String, Object>> avResults = new ArrayList<>();
-                    String avUrl = alphavantageBase + "?function=SYMBOL_SEARCH&keywords=" + java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8);
-                    if (alphavantageApiKey != null && !alphavantageApiKey.isBlank()) {
-                        avUrl = avUrl + "&apikey=" + java.net.URLEncoder.encode(alphavantageApiKey, java.nio.charset.StandardCharsets.UTF_8);
+            if (isValidResponse(response)) {
+                JsonNode root = objectMapper.readTree(response);
+                if (root.has("bestMatches") && root.get("bestMatches").isArray()) {
+                    for (JsonNode match : root.get("bestMatches")) {
+                        Map<String, Object> stock = extractStockFromAlphaVantage(match);
+                        results.add(stock);
                     }
-                    logger.debug("AlphaVantage direct search URL: {}", avUrl);
-                    String avResp = restTemplate.getForObject(avUrl, String.class);
-                    logger.debug("AlphaVantage raw response length: {}", avResp == null ? 0 : avResp.length());
-                    if (avResp != null && !avResp.isEmpty()) {
-                        JsonNode root = objectMapper.readTree(avResp);
-                        if (root.has("bestMatches") && root.get("bestMatches").isArray()) {
-                            for (JsonNode match : root.get("bestMatches")) {
-                                Map<String, Object> stock = new HashMap<>();
-                                String symbol = match.path("1. symbol").asText();
-                                String name = match.path("2. name").asText();
-                                stock.put("symbol", symbol);
-                                stock.put("name", name);
-                                stock.put("exchange", "ALPHA");
-                                avResults.add(stock);
-                            }
-                        }
-                    }
-                    if (!avResults.isEmpty()) {
-                        apiResults = avResults;
-                        logger.info("AlphaVantage direct search returned {} results for '{}'.", avResults.size(), query);
-                    }
-                } catch (Exception e) {
-                    logger.warn("AlphaVantage direct search failed for query '{}': {}", query, e.toString());
                 }
             }
-
-            logger.info("Found {} results for query: '{}'", apiResults.size(), query);
-            return ResponseEntity.ok(Map.of("results", apiResults));
-
+            
+            logger.info("AlphaVantage search returned {} results for '{}'", results.size(), query);
         } catch (Exception e) {
-            logger.error("Error during stock search for query: '{}'", query, e);
-            // In case of an unexpected error, return an empty list.
-            return ResponseEntity.status(500).body(Map.of("error", "An internal error occurred during search."));
+            logger.warn("AlphaVantage search failed for query '{}': {}", query, e.getMessage());
         }
+
+        return results;
     }
 
     // ---------------------- Search Crypto ----------------------
@@ -142,44 +137,54 @@ public class SearchController {
         
         logger.info("Crypto search requested with query: '{}'", query);
         
-        if (token == null || token.isBlank()) {
-            logger.warn("Authorization header missing for crypto search");
-            return ResponseEntity.status(401).body(Map.of("error", "Authorization header missing"));
-        }
+        List<Map<String, Object>> results = searchCryptoFromApis(query);
+        return ResponseEntity.ok(Map.of("results", results));
+    }
 
-        if (jwtUtils.getUserFromToken(token).isEmpty()) {
-            logger.warn("Invalid token received for crypto search");
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid or missing token"));
-        }
-
-        List<Map<String, Object>> results = new ArrayList<>();
-        if (query == null || query.isBlank() || query.length() < 2) {
-            return ResponseEntity.ok(Map.of("results", results));
+    private List<Map<String, Object>> searchCryptoFromApis(String query) {
+        if (isInvalidQuery(query)) {
+            return new ArrayList<>();
         }
 
         try {
-            String url = coingeckoBaseUrl + "/search?query=" + query;
-            logger.debug("Fetching from CoinGecko search API: {}", url);
+            String url = buildCoinGeckoSearchUrl(query);
             String response = restTemplate.getForObject(url, String.class);
 
-            if (response != null && !response.isEmpty()) {
-                JsonNode root = objectMapper.readTree(response);
-                if (root.has("coins") && root.get("coins").isArray()) {
-                    for (JsonNode node : root.get("coins")) {
-                        Map<String, Object> crypto = new HashMap<>();
-                        crypto.put("symbol", node.get("id").asText()); // Use 'id' for adding asset
-                        crypto.put("name", node.get("name").asText() + " (" + node.get("symbol").asText() + ")");
-                        crypto.put("exchange", "CRYPTO");
-                        results.add(crypto);
-                    }
-                }
+            if (isValidResponse(response)) {
+                return extractCryptoResults(response);
             }
-            return ResponseEntity.ok(Map.of("results", results));
         } catch (Exception e) {
-            logger.error("Error during crypto search for query: '{}'", query, e);
-            // If live API fails, use the local fallback list
-            return ResponseEntity.ok(Map.of("results", getFallbackCrypto(query)));
+            logger.error("Crypto search failed for query '{}': {}", query, e.getMessage());
         }
+
+        return getFallbackCrypto(query);
+    }
+
+    private List<Map<String, Object>> extractCryptoResults(String response) throws Exception {
+        List<Map<String, Object>> results = new ArrayList<>();
+        JsonNode root = objectMapper.readTree(response);
+        
+        if (root.has("coins") && root.get("coins").isArray()) {
+            for (JsonNode node : root.get("coins")) {
+                Map<String, Object> crypto = extractCryptoFromNode(node);
+                results.add(crypto);
+            }
+        }
+        
+        return results;
+    }
+
+    private Map<String, Object> extractCryptoFromNode(JsonNode node) {
+        Map<String, Object> crypto = new HashMap<>();
+        String id = node.get("id").asText();
+        String name = node.get("name").asText();
+        String symbol = node.get("symbol").asText();
+        
+        crypto.put("symbol", id);
+        crypto.put("name", name + " (" + symbol + ")");
+        crypto.put("exchange", "CRYPTO");
+        
+        return crypto;
     }
 
     // ---------------------- Search Mutual Funds ----------------------
@@ -190,190 +195,261 @@ public class SearchController {
         
         logger.info("Mutual Fund search requested with query: '{}'", query);
         
-        if (token == null || token.isBlank()) {
-            logger.warn("Authorization header missing for MF search");
-            return ResponseEntity.status(401).body(Map.of("error", "Authorization header missing"));
-        }
-
-        if (jwtUtils.getUserFromToken(token).isEmpty()) {
-            logger.warn("Invalid token received for MF search");
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid or missing token"));
-        }
-
         List<Map<String, Object>> results = new ArrayList<>();
-        if (query == null || query.isBlank() || query.length() < 2) {
-            return ResponseEntity.ok(Map.of("results", results));
+        if (!isInvalidQuery(query)) {
+            results = getFallbackMutualFunds(query);
         }
 
-        try {
-            // Use fallback MF list with simple filtering
-            results = getFallbackMutualFunds(query);
-            return ResponseEntity.ok(Map.of("results", results));
-        } catch (Exception e) {
-            logger.error("Error during mutual fund search for query: '{}'", query, e);
-            return ResponseEntity.ok(Map.of("results", getFallbackMutualFunds(query)));
-        }
+        return ResponseEntity.ok(Map.of("results", results));
     }
 
-    // Search NSE using the correct autocomplete endpoint, with alphavantage fallback
+    // ---------------------- Search NSE ----------------------
     private List<Map<String, Object>> searchNSE(String query) {
         List<Map<String, Object>> results = new ArrayList<>();
-        if (query == null || query.isBlank() || query.length() < 2) {
-            return results; // Don't search for very short queries
+        if (isInvalidQuery(query)) {
+            return results;
         }
 
-        boolean usedLive = false;
         try {
-            String url = nseBaseUrl + "/api/search/autocomplete?q=" + query;
-            logger.debug("Fetching from NSE search API: {}", url);
+            String url = buildNseSearchUrl(query);
             String response = restTemplate.getForObject(url, String.class);
 
-            if (response != null && !response.isEmpty()) {
-                JsonNode root = objectMapper.readTree(response);
-                if (root.has("symbols") && root.get("symbols").isArray()) {
-                    for (JsonNode node : root.get("symbols")) {
-                        Map<String, Object> stock = new HashMap<>();
-                        stock.put("symbol", node.path("symbol").asText());
-                        stock.put("name", node.path("name").asText());
-                        stock.put("exchange", "NSE"); // All results from this API are NSE
-                        results.add(stock);
-                    }
-                }
+            if (isValidResponse(response)) {
+                results = extractNseResults(response);
             }
-
+            
             if (!results.isEmpty()) {
-                usedLive = true;
-                logger.info("Using NSE live search for query {} returned {} results", query, results.size());
+                logger.info("NSE search returned {} results for query '{}'", results.size(), query);
+                return deduplicateBySymbol(results);
             }
         } catch (Exception e) {
-            logger.warn("NSE live search failed for query '{}', will attempt AlphaVantage fallback.", query);
+            logger.warn("NSE search failed for query '{}', trying AlphaVantage fallback", query);
         }
 
-        // If NSE failed or returned empty, try Alpha Vantage SYMBOL_SEARCH as a fallback
-        if (!usedLive) {
-            try {
-                String avUrl = alphavantageBase + "?function=SYMBOL_SEARCH&keywords=" + java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8);
-                if (alphavantageApiKey != null && !alphavantageApiKey.isBlank()) {
-                    avUrl = avUrl + "&apikey=" + java.net.URLEncoder.encode(alphavantageApiKey, java.nio.charset.StandardCharsets.UTF_8);
-                }
-                logger.debug("Fetching from AlphaVantage symbol search: {}", avUrl);
-                String avResp = restTemplate.getForObject(avUrl, String.class);
-                if (avResp != null && !avResp.isEmpty()) {
-                    JsonNode root = objectMapper.readTree(avResp);
-                    if (root.has("bestMatches") && root.get("bestMatches").isArray()) {
-                        for (JsonNode match : root.get("bestMatches")) {
-                            Map<String, Object> stock = new HashMap<>();
-                            String symbol = match.path("1. symbol").asText();
-                            String name = match.path("2. name").asText();
-                            stock.put("symbol", symbol);
-                            stock.put("name", name);
-                            stock.put("exchange", "ALPHA");
-                            results.add(stock);
-                        }
-                    }
-                }
-
-                if (!results.isEmpty()) {
-                    logger.info("Using AlphaVantage fallback for query {} returned {} results", query, results.size());
-                }
-            } catch (Exception e) {
-                logger.error("AlphaVantage fallback failed for query '{}'. Returning static fallback.", query, e);
-                return getFallbackStocks(query);
-            }
+        // Fallback to AlphaVantage if NSE fails
+        List<Map<String, Object>> avResults = searchAlphaVantage(query);
+        if (!avResults.isEmpty()) {
+            logger.info("AlphaVantage fallback returned {} results", avResults.size());
+            return deduplicateBySymbol(avResults);
         }
 
-        // If still empty, return static fallback
-        if (results.isEmpty()) {
-            return getFallbackStocks(query);
-        }
-
-        // Deduplicate by symbol
-        Map<String, Map<String, Object>> unique = new LinkedHashMap<>();
-        for (Map<String, Object> r : results) {
-            unique.put(((String) r.get("symbol")).toUpperCase(), r);
-        }
-
-        return new ArrayList<>(unique.values());
+        return getFallbackStocks(query);
     }
 
-    // Try Yahoo search endpoint first (free, no API key required)
+    private List<Map<String, Object>> extractNseResults(String response) throws Exception {
+        List<Map<String, Object>> results = new ArrayList<>();
+        JsonNode root = objectMapper.readTree(response);
+        
+        if (root.has("symbols") && root.get("symbols").isArray()) {
+            for (JsonNode node : root.get("symbols")) {
+                Map<String, Object> stock = extractStockFromNse(node);
+                results.add(stock);
+            }
+        }
+        
+        return results;
+    }
+
+    private Map<String, Object> extractStockFromNse(JsonNode node) {
+        Map<String, Object> stock = new HashMap<>();
+        stock.put("symbol", node.path("symbol").asText());
+        stock.put("name", node.path("name").asText());
+        stock.put("exchange", "NSE");
+        return stock;
+    }
+
+    // ---------------------- Search Yahoo ----------------------
     private List<Map<String, Object>> searchYahoo(String query) {
         List<Map<String, Object>> results = new ArrayList<>();
-        if (query == null || query.isBlank() || query.length() < 2) return results;
+        if (isInvalidQuery(query)) {
+            return results;
+        }
 
         try {
-            String url = yahooSearchBase + "/v1/finance/search?q=" + java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8);
-            logger.debug("Fetching from Yahoo search API: {}", url);
-            String resp = restTemplate.getForObject(url, String.class);
-            logger.debug("Yahoo raw response length: {}", resp == null ? 0 : resp.length());
-            if (resp != null && !resp.isEmpty()) {
-                JsonNode root = objectMapper.readTree(resp);
-                if (root.has("quotes") && root.get("quotes").isArray()) {
-                    for (JsonNode q : root.get("quotes")) {
-                        String symbol = q.path("symbol").asText();
-                        if (symbol == null || symbol.isBlank()) continue;
-                        Map<String, Object> stock = new HashMap<>();
-                        stock.put("symbol", symbol);
-                        String name = q.path("shortname").asText(null);
-                        if (name == null) name = q.path("longname").asText(null);
-                        if (name == null) name = q.path("quoteType").asText(null);
-                        stock.put("name", name != null ? name : symbol);
-                        String exch = q.path("exchDisp").asText(null);
-                        if (exch == null) exch = q.path("exchange").asText(null);
-                        stock.put("exchange", exch != null ? exch : "YAHOO");
-                        results.add(stock);
-                    }
-                } else {
-                    logger.debug("Yahoo search returned no 'quotes' array for query: {}", query);
-                }
-            } else {
-                logger.debug("Yahoo search returned empty response for query: {}", query);
+            String url = buildYahooSearchUrl(query);
+            String response = restTemplate.getForObject(url, String.class);
+
+            if (isValidResponse(response)) {
+                results = extractYahooResults(response);
             }
 
-            // Enrich with live prices via quote endpoint for top N results
+            // Enrich results with live prices
             if (!results.isEmpty()) {
-                int limit = Math.min(8, results.size());
-                String symbols = String.join(",", results.subList(0, limit).stream().map(r -> r.get("symbol").toString()).toArray(String[]::new));
-                String qUrl = yahooQuoteBase + "/v7/finance/quote?symbols=" + java.net.URLEncoder.encode(symbols, java.nio.charset.StandardCharsets.UTF_8);
-                logger.debug("Fetching Yahoo quotes: {}", qUrl);
-                String qResp = restTemplate.getForObject(qUrl, String.class);
-                logger.debug("Yahoo quote raw response length: {}", qResp == null ? 0 : qResp.length());
-                if (qResp != null && !qResp.isEmpty()) {
-                    JsonNode root = objectMapper.readTree(qResp);
-                    if (root.has("quoteResponse") && root.get("quoteResponse").has("result")) {
-                        for (JsonNode r : root.get("quoteResponse").get("result")) {
-                            String sym = r.path("symbol").asText();
-                            double price = r.path("regularMarketPrice").asDouble(Double.NaN);
-                            if (!Double.isNaN(price)) {
-                                for (Map<String, Object> m : results) {
-                                    if (sym.equalsIgnoreCase(m.get("symbol").toString())) {
-                                        m.put("price", price);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                logger.info("Using Yahoo Search for query {} returned {} results", query, results.size());
-            }
-
-            // Deduplicate and return if results found
-            if (!results.isEmpty()) {
-                Map<String, Map<String, Object>> unique = new LinkedHashMap<>();
-                for (Map<String, Object> r : results) unique.put(((String) r.get("symbol")).toUpperCase(), r);
-                return new ArrayList<>(unique.values());
+                enrichWithYahooPrices(results);
+                logger.info("Yahoo search returned {} results for query '{}'", results.size(), query);
+                return deduplicateBySymbol(results);
             }
 
         } catch (Exception e) {
-            logger.warn("Yahoo search failed for query '{}': {}", query, e.toString());
+            logger.warn("Yahoo search failed for query '{}': {}", query, e.getMessage());
         }
 
         return results;
     }
 
-    // Static block to hold fallback stock data
-    private static final Map<String, StockData> FALLBACK_STOCKS = new HashMap<>();
+    private List<Map<String, Object>> extractYahooResults(String response) throws Exception {
+        List<Map<String, Object>> results = new ArrayList<>();
+        JsonNode root = objectMapper.readTree(response);
+        
+        if (root.has("quotes") && root.get("quotes").isArray()) {
+            for (JsonNode node : root.get("quotes")) {
+                Map<String, Object> stock = extractStockFromYahoo(node);
+                if (stock != null) {
+                    results.add(stock);
+                }
+            }
+        }
+        
+        return results;
+    }
+
+    private Map<String, Object> extractStockFromYahoo(JsonNode node) {
+        String symbol = node.path("symbol").asText();
+        if (symbol == null || symbol.isBlank()) {
+            return null;
+        }
+
+        Map<String, Object> stock = new HashMap<>();
+        stock.put("symbol", symbol);
+        
+        String name = getPreferredName(node, "shortname", "longname", "quoteType");
+        stock.put("name", name != null ? name : symbol);
+        
+        String exchange = getPreferredExchange(node, "exchDisp", "exchange");
+        stock.put("exchange", exchange != null ? exchange : "YAHOO");
+        
+        return stock;
+    }
+
+    private String getPreferredName(JsonNode node, String... fields) {
+        for (String field : fields) {
+            String value = node.path(field).asText(null);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private String getPreferredExchange(JsonNode node, String... fields) {
+        for (String field : fields) {
+            String value = node.path(field).asText(null);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private void enrichWithYahooPrices(List<Map<String, Object>> results) {
+        try {
+            int limit = Math.min(QUOTE_LIMIT, results.size());
+            List<Map<String, Object>> limitedResults = results.subList(0, limit);
+            
+            String symbols = buildSymbolList(limitedResults);
+            String url = buildYahooQuoteUrl(symbols);
+            String response = restTemplate.getForObject(url, String.class);
+
+            if (isValidResponse(response)) {
+                applyPricesToResults(response, results);
+            }
+        } catch (Exception e) {
+            logger.debug("Failed to enrich prices from Yahoo quotes: {}", e.getMessage());
+        }
+    }
+
+    private void applyPricesToResults(String response, List<Map<String, Object>> results) throws Exception {
+        JsonNode root = objectMapper.readTree(response);
+        
+        if (root.has("quoteResponse") && root.get("quoteResponse").has("result")) {
+            for (JsonNode quoteNode : root.get("quoteResponse").get("result")) {
+                String symbol = quoteNode.path("symbol").asText();
+                double price = quoteNode.path("regularMarketPrice").asDouble(Double.NaN);
+                
+                if (!Double.isNaN(price)) {
+                    updateSymbolPrice(results, symbol, price);
+                }
+            }
+        }
+    }
+
+    private void updateSymbolPrice(List<Map<String, Object>> results, String symbol, double price) {
+        for (Map<String, Object> result : results) {
+            if (symbol.equalsIgnoreCase(result.get("symbol").toString())) {
+                result.put("price", price);
+                break;
+            }
+        }
+    }
+
+    // ---------------------- Helper Methods ----------------------
+    
+    private boolean isInvalidQuery(String query) {
+        return query == null || query.isBlank() || query.length() < MIN_QUERY_LENGTH;
+    }
+
+    private boolean isValidResponse(String response) {
+        return response != null && !response.isEmpty();
+    }
+
+    private String buildNseSearchUrl(String query) {
+        return nseBaseUrl + "/api/search/autocomplete?q=" + query;
+    }
+
+    private String buildYahooSearchUrl(String query) throws Exception {
+        String encoded = java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8);
+        return yahooSearchBase + "/v1/finance/search?q=" + encoded;
+    }
+
+    private String buildYahooQuoteUrl(String symbols) throws Exception {
+        String encoded = java.net.URLEncoder.encode(symbols, java.nio.charset.StandardCharsets.UTF_8);
+        return yahooQuoteBase + "/v7/finance/quote?symbols=" + encoded;
+    }
+
+    private String buildAlphaVantageSearchUrl(String query) throws Exception {
+        String encoded = java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8);
+        String url = alphavantageBase + "?function=SYMBOL_SEARCH&keywords=" + encoded;
+        
+        if (alphavantageApiKey != null && !alphavantageApiKey.isBlank()) {
+            String apiKey = java.net.URLEncoder.encode(alphavantageApiKey, java.nio.charset.StandardCharsets.UTF_8);
+            url = url + "&apikey=" + apiKey;
+        }
+        
+        return url;
+    }
+
+    private String buildCoinGeckoSearchUrl(String query) {
+        return coingeckoBaseUrl + "/search?query=" + query;
+    }
+
+    private String buildSymbolList(List<Map<String, Object>> results) {
+        return String.join(",", results.stream()
+            .map(r -> r.get("symbol").toString())
+            .toArray(String[]::new));
+    }
+
+    private Map<String, Object> extractStockFromAlphaVantage(JsonNode match) {
+        Map<String, Object> stock = new HashMap<>();
+        String symbol = match.path("1. symbol").asText();
+        String name = match.path("2. name").asText();
+        
+        stock.put("symbol", symbol);
+        stock.put("name", name);
+        stock.put("exchange", "ALPHA");
+        
+        return stock;
+    }
+
+    private List<Map<String, Object>> deduplicateBySymbol(List<Map<String, Object>> results) {
+        Map<String, Map<String, Object>> unique = new LinkedHashMap<>();
+        for (Map<String, Object> result : results) {
+            String symbol = result.get("symbol").toString().toUpperCase();
+            unique.put(symbol, result);
+        }
+        return new ArrayList<>(unique.values());
+    }
+
+    // ---------------------- Fallback Data Methods ----------------------
     static {
         // Nifty 50 Companies (Updated with latest closing prices)
         FALLBACK_STOCKS.put("TCS", new StockData("Tata Consultancy Services", "NSE", 3850.0));
@@ -508,59 +584,59 @@ public class SearchController {
 
     // Fallback stock data with live prices
     private List<Map<String, Object>> getFallbackStocks(String query) {
-        String q = query == null || query.isBlank() ? "" : query.toUpperCase();
+        String queryUpperCase = normalizeQuery(query);
         
-        // Filter stocks by query
         return FALLBACK_STOCKS.entrySet().stream()
-            .filter(entry -> q.isEmpty() || entry.getKey().contains(q) || entry.getValue().name.toUpperCase().contains(q))
-            .map(entry -> {
-                Map<String, Object> result = new HashMap<>();
-                result.put("symbol", entry.getKey());
-                result.put("name", entry.getValue().name);
-                result.put("exchange", entry.getValue().exchange);
-                result.put("price", entry.getValue().price);
-                return result;
-            })
-            .limit(10) // Limit to 10 results
+            .filter(entry -> matchesQuery(queryUpperCase, entry.getKey(), entry.getValue().name))
+            .map(entry -> createStockMap(entry.getKey(), entry.getValue()))
+            .limit(MAX_RESULTS)
             .collect(Collectors.toList());
     }
     
     // Fallback crypto data
     private List<Map<String, Object>> getFallbackCrypto(String query) {
-        String q = query == null || query.isBlank() ? "" : query.toLowerCase();
-
-        // Filter crypto by query
+        String queryLowerCase = normalizeCryptoQuery(query);
+        
         return FALLBACK_CRYPTO.entrySet().stream()
-            .filter(entry -> q.isEmpty() || entry.getKey().contains(q) || entry.getValue().name.toLowerCase().contains(q))
-            .map(entry -> {
-                Map<String, Object> result = new HashMap<>();
-                result.put("symbol", entry.getKey()); // This is the CoinGecko ID
-                result.put("name", entry.getValue().name);
-                result.put("exchange", entry.getValue().exchange);
-                result.put("price", entry.getValue().price);
-                return result;
-            })
-            .limit(10) // Limit to 10 results
+            .filter(entry -> matchesQuery(queryLowerCase, entry.getKey(), entry.getValue().name))
+            .map(entry -> createStockMap(entry.getKey(), entry.getValue()))
+            .limit(MAX_RESULTS)
             .collect(Collectors.toList());
     }
 
     // Fallback mutual funds data
     private List<Map<String, Object>> getFallbackMutualFunds(String query) {
-        String q = query == null || query.isBlank() ? "" : query.toLowerCase();
-
-        // Filter MF by query
+        String queryLowerCase = normalizeCryptoQuery(query);
+        
         return FALLBACK_MUTUAL_FUNDS.entrySet().stream()
-            .filter(entry -> q.isEmpty() || entry.getKey().toLowerCase().contains(q) || entry.getValue().name.toLowerCase().contains(q))
-            .map(entry -> {
-                Map<String, Object> result = new HashMap<>();
-                result.put("symbol", entry.getKey());
-                result.put("name", entry.getValue().name);
-                result.put("exchange", entry.getValue().exchange);
-                result.put("price", entry.getValue().price);
-                return result;
-            })
-            .limit(10) // Limit to 10 results
+            .filter(entry -> matchesQuery(queryLowerCase, entry.getKey(), entry.getValue().name))
+            .map(entry -> createStockMap(entry.getKey(), entry.getValue()))
+            .limit(MAX_RESULTS)
             .collect(Collectors.toList());
+    }
+
+    private String normalizeQuery(String query) {
+        return query == null || query.isBlank() ? "" : query.toUpperCase();
+    }
+
+    private String normalizeCryptoQuery(String query) {
+        return query == null || query.isBlank() ? "" : query.toLowerCase();
+    }
+
+    private boolean matchesQuery(String query, String symbol, String name) {
+        if (query.isEmpty()) {
+            return true;
+        }
+        return symbol.contains(query) || name.contains(query);
+    }
+
+    private Map<String, Object> createStockMap(String symbol, StockData data) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("symbol", symbol);
+        map.put("name", data.name);
+        map.put("exchange", data.exchange);
+        map.put("price", data.price);
+        return map;
     }
 
     // Inner class for stock data
