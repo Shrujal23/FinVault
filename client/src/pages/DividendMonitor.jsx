@@ -15,6 +15,7 @@ export default function DividendMonitor({ auth }) {
   const [days, setDays] = useState(90);
 
   const onSaved = () => setRefresh((r) => r + 1);
+  const bumpRefresh = () => setRefresh((r) => r + 1);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-cyan-50/40 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 pb-12">

@@ -2,122 +2,153 @@ import { useState } from 'react';
 import { apiRequest } from '../api/client.js';
 import { PlusCircle, Loader2 } from 'lucide-react';
 
-function saveLocal(div) {
+function saveToLocal(dividend) {
   try {
-    const raw = localStorage.getItem('dividends') || '[]';
-    const arr = JSON.parse(raw);
-    arr.unshift(div);
-    localStorage.setItem('dividends', JSON.stringify(arr));
-  } catch (e) {
-    console.error(e);
+    const existing = localStorage.getItem('dividends') || '[]';
+    const dividends = JSON.parse(existing);
+    dividends.unshift({
+      id: `${dividend.ticker}-${Date.now()}`,
+      ...dividend,
+      createdAt: new Date().toISOString()
+    });
+    localStorage.setItem('dividends', JSON.stringify(dividends));
+  } catch (err) {
+    console.error('Failed to save dividend locally:', err);
   }
 }
 
 export default function DividendForm({ token, onSaved }) {
-  const [ticker, setTicker] = useState('');
-  const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState('INR');
-  const [exDate, setExDate] = useState('');
-  const [payDate, setPayDate] = useState('');
-  const [frequency, setFrequency] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState('');
+  const [formData, setFormData] = useState({
+    ticker: '',
+    amount: '',
+    currency: 'INR',
+    exDate: '',
+    payDate: '',
+    frequency: ''
+  });
 
-  const submit = async (e) => {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormError('');
-    if (!ticker?.trim()) {
-      setFormError('Enter a ticker symbol.');
+    setError('');
+
+    if (!formData.ticker.trim()) {
+      setError('Please enter a ticker symbol');
       return;
     }
-    if (amount === '' || Number.isNaN(Number(amount))) {
-      setFormError('Enter a valid amount.');
+    if (!formData.amount || isNaN(Number(formData.amount))) {
+      setError('Please enter a valid amount');
       return;
     }
 
     const payload = {
-      ticker: ticker.trim().toUpperCase(),
-      amount: Number(amount),
-      currency,
-      exDate: exDate || null,
-      payDate: payDate || null,
-      frequency: frequency || null,
+      ticker: formData.ticker.trim().toUpperCase(),
+      amount: Number(formData.amount),
+      currency: formData.currency,
+      exDate: formData.exDate || null,
+      payDate: formData.payDate || null,
+      frequency: formData.frequency || null,
     };
 
-    if (token) {
-      setSaving(true);
-      try {
-        try {
-          await apiRequest('/api/dividends', { method: 'POST', body: payload, token });
-        } catch {
-          saveLocal({ id: `${payload.ticker}-${Date.now()}`, ...payload });
-        }
-        onSaved?.();
-      } finally {
-        setSaving(false);
-      }
-    } else {
-      saveLocal({ id: `${payload.ticker}-${Date.now()}`, ...payload });
-      onSaved?.();
-    }
+    setSaving(true);
 
-    setTicker('');
-    setAmount('');
-    setCurrency('INR');
-    setExDate('');
-    setPayDate('');
-    setFrequency('');
+    try {
+      if (token) {
+        try {
+          await apiRequest('/api/dividends', { 
+            method: 'POST', 
+            body: payload, 
+            token 
+          });
+        } catch (apiError) {
+          console.warn('API save failed, saving locally instead');
+          saveToLocal(payload);
+        }
+      } else {
+        saveToLocal(payload);
+      }
+
+      onSaved?.();
+      
+      // Reset form
+      setFormData({
+        ticker: '',
+        amount: '',
+        currency: 'INR',
+        exDate: '',
+        payDate: '',
+        frequency: ''
+      });
+    } catch (err) {
+      setError('Failed to save dividend. Please try again.');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const inputClass =
-    'w-full mt-1.5 px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-950 placeholder-slate-400 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 outline-none transition';
-  const labelClass = 'block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400';
+  const handleChange = (field) => (e) => {
+    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+  };
 
   return (
     <div id="add-dividend-panel" className="scroll-mt-24">
-      <div className="mb-5 flex items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 text-cyan-700 dark:text-cyan-400">
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 dark:bg-cyan-900/50 text-cyan-600 dark:text-cyan-400">
           <PlusCircle className="w-5 h-5" />
         </div>
         <div>
-          <h2 className="font-bold text-slate-900 dark:text-white">Add dividend</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Manual row for tracking (per-share amount)</p>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Add Dividend</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Manual entry for tracking</p>
         </div>
       </div>
 
-      <form onSubmit={submit} className="space-y-4">
-        {formError && (
-          <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-sm text-red-800 dark:text-red-300">
-            {formError}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error && (
+          <div className="rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-300">
+            {error}
           </div>
         )}
 
         <div>
-          <label className={labelClass}>Ticker</label>
+          <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+            Ticker Symbol
+          </label>
           <input
-            value={ticker}
-            onChange={(e) => setTicker(e.target.value)}
-            className={inputClass}
-            placeholder="e.g. RELIANCE, AAPL"
-            autoComplete="off"
+            type="text"
+            value={formData.ticker}
+            onChange={handleChange('ticker')}
+            placeholder="e.g. RELIANCE, TCS, AAPL"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Amount</label>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Amount (per share)
+            </label>
             <input
-              type="text"
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className={inputClass}
+              type="number"
+              step="0.01"
+              value={formData.amount}
+              onChange={handleChange('amount')}
               placeholder="0.00"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
           </div>
+
           <div>
-            <label className={labelClass}>Currency</label>
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={inputClass}>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Currency
+            </label>
+            <select
+              value={formData.currency}
+              onChange={handleChange('currency')}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            >
               <option value="INR">INR</option>
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
@@ -125,21 +156,42 @@ export default function DividendForm({ token, onSaved }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Ex date</label>
-            <input type="date" value={exDate} onChange={(e) => setExDate(e.target.value)} className={inputClass} />
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Ex-Date
+            </label>
+            <input
+              type="date"
+              value={formData.exDate}
+              onChange={handleChange('exDate')}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            />
           </div>
+
           <div>
-            <label className={labelClass}>Pay date</label>
-            <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className={inputClass} />
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Pay Date
+            </label>
+            <input
+              type="date"
+              value={formData.payDate}
+              onChange={handleChange('payDate')}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            />
           </div>
         </div>
 
         <div>
-          <label className={labelClass}>Frequency</label>
-          <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className={inputClass}>
-            <option value="">Select…</option>
+          <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+            Frequency
+          </label>
+          <select
+            value={formData.frequency}
+            onChange={handleChange('frequency')}
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          >
+            <option value="">Select Frequency</option>
             <option value="Monthly">Monthly</option>
             <option value="Quarterly">Quarterly</option>
             <option value="Semi-annual">Semi-annual</option>
@@ -148,27 +200,23 @@ export default function DividendForm({ token, onSaved }) {
           </select>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center pt-1">
+        <div className="flex gap-3 pt-2">
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-3 text-sm font-semibold text-white hover:from-cyan-500 hover:to-blue-500 disabled:opacity-60"
+            className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-70"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlusCircle className="w-4 h-4" />}
-            {saving ? 'Saving…' : 'Add to calendar'}
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <PlusCircle className="w-5 h-5" />}
+            {saving ? 'Saving...' : 'Add to Calendar'}
           </button>
+
           <button
             type="button"
             onClick={() => {
-              setTicker('');
-              setAmount('');
-              setCurrency('INR');
-              setExDate('');
-              setPayDate('');
-              setFrequency('');
-              setFormError('');
+              setFormData({ ticker: '', amount: '', currency: 'INR', exDate: '', payDate: '', frequency: '' });
+              setError('');
             }}
-            className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            className="px-6 py-3.5 border border-slate-300 dark:border-slate-700 rounded-2xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             Clear
           </button>
