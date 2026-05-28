@@ -450,136 +450,138 @@ public class SearchController {
     }
 
     // ---------------------- Fallback Data Methods ----------------------
+    private static final Map<String, StockData> FALLBACK_STOCKS = new HashMap<>();
+
     static {
         // Nifty 50 Companies (Updated with latest closing prices)
-        FALLBACK_STOCKS.put("TCS", new StockData("Tata Consultancy Services", "NSE", 3850.0));
-        FALLBACK_STOCKS.put("INFY", new StockData("Infosys Limited", "NSE", 1950.0));
-        FALLBACK_STOCKS.put("WIPRO", new StockData("Wipro Limited", "NSE", 425.0));
-        FALLBACK_STOCKS.put("RELIANCE", new StockData("Reliance Industries", "NSE", 2900.0));
-        FALLBACK_STOCKS.put("HDFC", new StockData("Housing Development Finance", "NSE", 2750.0));
-        FALLBACK_STOCKS.put("ICICIBANK", new StockData("ICICI Bank", "NSE", 1100.0));
-        FALLBACK_STOCKS.put("AXISBANK", new StockData("Axis Bank", "NSE", 1150.0));
-        FALLBACK_STOCKS.put("MARUTI", new StockData("Maruti Suzuki India", "NSE", 12500.0));
-        FALLBACK_STOCKS.put("BAJAJFINSV", new StockData("Bajaj Finserv", "NSE", 1600.0));
-        FALLBACK_STOCKS.put("HDFCBANK", new StockData("HDFC Bank", "NSE", 1500.0));
-        FALLBACK_STOCKS.put("SBIN", new StockData("State Bank of India", "NSE", 830.0));
-        FALLBACK_STOCKS.put("BHARTIARTL", new StockData("Bharti Airtel", "NSE", 1350.0));
-        FALLBACK_STOCKS.put("JSWSTEEL", new StockData("JSW Steel", "NSE", 915.0));
-        FALLBACK_STOCKS.put("LT", new StockData("Larsen & Toubro", "NSE", 3600.0));
-        FALLBACK_STOCKS.put("KOTAKBANK", new StockData("Kotak Mahindra Bank", "NSE", 1700.0));
-        FALLBACK_STOCKS.put("ULTRACEMCO", new StockData("UltraTech Cement", "NSE", 10800.0));
-        FALLBACK_STOCKS.put("SUNPHARMA", new StockData("Sun Pharmaceutical", "NSE", 1600.0));
-        FALLBACK_STOCKS.put("ASIANPAINT", new StockData("Asian Paints", "NSE", 2900.0));
-        FALLBACK_STOCKS.put("DMART", new StockData("Avenue Supermarts", "NSE", 4700.0));
-        FALLBACK_STOCKS.put("HEROMOTOCO", new StockData("Hero MotoCorp", "NSE", 5500.0));
-        FALLBACK_STOCKS.put("HINDALCO", new StockData("Hindalco Industries", "NSE", 670.0));
-        FALLBACK_STOCKS.put("TATASTEEL", new StockData("Tata Steel", "NSE", 175.0));
-        FALLBACK_STOCKS.put("ADANIPORTS", new StockData("Adani Ports", "NSE", 1400.0));
-        FALLBACK_STOCKS.put("ADANIGREEN", new StockData("Adani Green Energy", "NSE", 1800.0));
-        FALLBACK_STOCKS.put("INDIGO", new StockData("IndiGo", "NSE", 4300.0));
-        FALLBACK_STOCKS.put("ONGC", new StockData("Oil and Natural Gas", "NSE", 270.0));
-        FALLBACK_STOCKS.put("POWERGRID", new StockData("Power Grid", "NSE", 320.0));
-        FALLBACK_STOCKS.put("NTPC", new StockData("NTPC Limited", "NSE", 360.0));
-        FALLBACK_STOCKS.put("EICHERMOT", new StockData("Eicher Motors", "NSE", 4700.0));
-        FALLBACK_STOCKS.put("MARICO", new StockData("Marico Limited", "NSE", 610.0));
-        FALLBACK_STOCKS.put("BRITANNIA", new StockData("Britannia Industries", "NSE", 5300.0));
-        FALLBACK_STOCKS.put("NESTLEIND", new StockData("Nestlé India", "NSE", 2500.0));
-        FALLBACK_STOCKS.put("TITAN", new StockData("Titan Company", "NSE", 3250.0));
-        FALLBACK_STOCKS.put("GRASIM", new StockData("Grasim Industries", "NSE", 2400.0));
-        FALLBACK_STOCKS.put("SIEMENS", new StockData("Siemens Limited", "NSE", 7400.0));
+        FALLBACK_STOCKS.put("TCS", new StockData("Tata Consultancy Services", "NSE", 2284.20));
+        FALLBACK_STOCKS.put("INFY", new StockData("Infosys Limited", "NSE", 1350.50));
+        FALLBACK_STOCKS.put("WIPRO", new StockData("Wipro Limited", "NSE", 405.20));
+        FALLBACK_STOCKS.put("RELIANCE", new StockData("Reliance Industries", "NSE", 1400.55));
+        FALLBACK_STOCKS.put("HDFC", new StockData("Housing Development Finance", "NSE", 2800.0));
+        FALLBACK_STOCKS.put("ICICIBANK", new StockData("ICICI Bank", "NSE", 1250.0));
+        FALLBACK_STOCKS.put("AXISBANK", new StockData("Axis Bank", "NSE", 1200.0));
+        FALLBACK_STOCKS.put("MARUTI", new StockData("Maruti Suzuki India", "NSE", 13200.0));
+        FALLBACK_STOCKS.put("BAJAJFINSV", new StockData("Bajaj Finserv", "NSE", 1750.0));
+        FALLBACK_STOCKS.put("HDFCBANK", new StockData("HDFC Bank", "NSE", 1650.0));
+        FALLBACK_STOCKS.put("SBIN", new StockData("State Bank of India", "NSE", 850.0));
+        FALLBACK_STOCKS.put("BHARTIARTL", new StockData("Bharti Airtel", "NSE", 1450.0));
+        FALLBACK_STOCKS.put("JSWSTEEL", new StockData("JSW Steel", "NSE", 950.0));
+        FALLBACK_STOCKS.put("LT", new StockData("Larsen & Toubro", "NSE", 3800.0));
+        FALLBACK_STOCKS.put("KOTAKBANK", new StockData("Kotak Mahindra Bank", "NSE", 1800.0));
+        FALLBACK_STOCKS.put("ULTRACEMCO", new StockData("UltraTech Cement", "NSE", 11200.0));
+        FALLBACK_STOCKS.put("SUNPHARMA", new StockData("Sun Pharmaceutical", "NSE", 1700.0));
+        FALLBACK_STOCKS.put("ASIANPAINT", new StockData("Asian Paints", "NSE", 2950.0));
+        FALLBACK_STOCKS.put("DMART", new StockData("Avenue Supermarts", "NSE", 4900.0));
+        FALLBACK_STOCKS.put("HEROMOTOCO", new StockData("Hero MotoCorp", "NSE", 5600.0));
+        FALLBACK_STOCKS.put("HINDALCO", new StockData("Hindalco Industries", "NSE", 700.0));
+        FALLBACK_STOCKS.put("TATASTEEL", new StockData("Tata Steel", "NSE", 185.0));
+        FALLBACK_STOCKS.put("ADANIPORTS", new StockData("Adani Ports", "NSE", 1500.0));
+        FALLBACK_STOCKS.put("ADANIGREEN", new StockData("Adani Green Energy", "NSE", 1900.0));
+        FALLBACK_STOCKS.put("INDIGO", new StockData("IndiGo", "NSE", 4500.0));
+        FALLBACK_STOCKS.put("ONGC", new StockData("Oil and Natural Gas", "NSE", 290.0));
+        FALLBACK_STOCKS.put("POWERGRID", new StockData("Power Grid", "NSE", 340.0));
+        FALLBACK_STOCKS.put("NTPC", new StockData("NTPC Limited", "NSE", 380.0));
+        FALLBACK_STOCKS.put("EICHERMOT", new StockData("Eicher Motors", "NSE", 4800.0));
+        FALLBACK_STOCKS.put("MARICO", new StockData("Marico Limited", "NSE", 630.0));
+        FALLBACK_STOCKS.put("BRITANNIA", new StockData("Britannia Industries", "NSE", 5400.0));
+        FALLBACK_STOCKS.put("NESTLEIND", new StockData("Nestlé India", "NSE", 2600.0));
+        FALLBACK_STOCKS.put("TITAN", new StockData("Titan Company", "NSE", 3400.0));
+        FALLBACK_STOCKS.put("GRASIM", new StockData("Grasim Industries", "NSE", 2500.0));
+        FALLBACK_STOCKS.put("SIEMENS", new StockData("Siemens Limited", "NSE", 7600.0));
         
         // Midcap Stocks (Updated with latest closing prices)
-        FALLBACK_STOCKS.put("BEL", new StockData("Bharat Electronics", "NSE", 300.0));
-        FALLBACK_STOCKS.put("BDL", new StockData("Bharat Dynamics", "NSE", 1500.0));
-        FALLBACK_STOCKS.put("GODREJCP", new StockData("Godrej Consumer Products", "NSE", 1370.0));
-        FALLBACK_STOCKS.put("BAJAJ-AUTO", new StockData("Bajaj Auto", "NSE", 9200.0));
+        FALLBACK_STOCKS.put("BEL", new StockData("Bharat Electronics", "NSE", 320.0));
+        FALLBACK_STOCKS.put("BDL", new StockData("Bharat Dynamics", "NSE", 1600.0));
+        FALLBACK_STOCKS.put("GODREJCP", new StockData("Godrej Consumer Products", "NSE", 1450.0));
+        FALLBACK_STOCKS.put("BAJAJ-AUTO", new StockData("Bajaj Auto", "NSE", 9500.0));
         
         // Smallcap Stocks
-        FALLBACK_STOCKS.put("INDIANBANK", new StockData("Indian Bank", "NSE", 540.0));
-        FALLBACK_STOCKS.put("KPITTECH", new StockData("KPIT Technologies", "NSE", 1500.0));
-        FALLBACK_STOCKS.put("DIXON", new StockData("Dixon Technologies", "NSE", 9500.0));
-        FALLBACK_STOCKS.put("PAGEIND", new StockData("Page Industries", "NSE", 35000.0));
+        FALLBACK_STOCKS.put("INDIANBANK", new StockData("Indian Bank", "NSE", 560.0));
+        FALLBACK_STOCKS.put("KPITTECH", new StockData("KPIT Technologies", "NSE", 1600.0));
+        FALLBACK_STOCKS.put("DIXON", new StockData("Dixon Technologies", "NSE", 9800.0));
+        FALLBACK_STOCKS.put("PAGEIND", new StockData("Page Industries", "NSE", 36000.0));
     }
 
     // Static block to hold fallback mutual funds data
     private static final Map<String, StockData> FALLBACK_MUTUAL_FUNDS = new HashMap<>();
     static {
         // Popular Indian Mutual Funds
-        FALLBACK_MUTUAL_FUNDS.put("AAPLGO5Y", new StockData("Aditya Birla Sun Life Equity Fund", "MF", 350.0));
-        FALLBACK_MUTUAL_FUNDS.put("HSBCEQE", new StockData("HSBC Equity Fund", "MF", 280.0));
-        FALLBACK_MUTUAL_FUNDS.put("ICIEQE", new StockData("ICICI Prudential Equity Fund", "MF", 320.0));
-        FALLBACK_MUTUAL_FUNDS.put("JMFEQE", new StockData("JM Financial Equity Fund", "MF", 290.0));
-        FALLBACK_MUTUAL_FUNDS.put("KOTAGEQE", new StockData("Kotak Emerging Equity Fund", "MF", 310.0));
-        FALLBACK_MUTUAL_FUNDS.put("LTFEQE", new StockData("L&T Equity Fund", "MF", 300.0));
-        FALLBACK_MUTUAL_FUNDS.put("RELIGEQE", new StockData("Reliance Equity Opportunity Fund", "MF", 330.0));
-        FALLBACK_MUTUAL_FUNDS.put("SBIEQE", new StockData("SBI Equity Fund", "MF", 280.0));
-        FALLBACK_MUTUAL_FUNDS.put("TAAEQE", new StockData("Tata Equity Fund", "MF", 295.0));
-        FALLBACK_MUTUAL_FUNDS.put("UTIEQE", new StockData("UTI Equity Fund", "MF", 315.0));
-        FALLBACK_MUTUAL_FUNDS.put("AAPLDEBT", new StockData("Aditya Birla Sun Life Debt Fund", "MF", 102.0));
-        FALLBACK_MUTUAL_FUNDS.put("HSBCDEBT", new StockData("HSBC Debt Fund", "MF", 99.0));
-        FALLBACK_MUTUAL_FUNDS.put("ICIDEBT", new StockData("ICICI Prudential Debt Fund", "MF", 101.0));
-        FALLBACK_MUTUAL_FUNDS.put("KOTADEBT", new StockData("Kotak Debt Fund", "MF", 100.0));
-        FALLBACK_MUTUAL_FUNDS.put("SBILOW", new StockData("SBI Liquid Fund", "MF", 1.0));
-        FALLBACK_MUTUAL_FUNDS.put("ICILIQUID", new StockData("ICICI Prudential Liquid Fund", "MF", 1.0));
-        FALLBACK_MUTUAL_FUNDS.put("RELIBALFUND", new StockData("Reliance Balanced Fund", "MF", 180.0));
-        FALLBACK_MUTUAL_FUNDS.put("SBIBALF", new StockData("SBI Balanced Fund", "MF", 170.0));
-        FALLBACK_MUTUAL_FUNDS.put("HDLOWDIV", new StockData("HDFC Low Duration Fund", "MF", 20.0));
-        FALLBACK_MUTUAL_FUNDS.put("AAXAINFRA", new StockData("Axis Infra Fund", "MF", 220.0));
+        FALLBACK_MUTUAL_FUNDS.put("AAPLGO5Y", new StockData("Aditya Birla Sun Life Equity Fund", "MF", 380.0));
+        FALLBACK_MUTUAL_FUNDS.put("HSBCEQE", new StockData("HSBC Equity Fund", "MF", 305.0));
+        FALLBACK_MUTUAL_FUNDS.put("ICIEQE", new StockData("ICICI Prudential Equity Fund", "MF", 350.0));
+        FALLBACK_MUTUAL_FUNDS.put("JMFEQE", new StockData("JM Financial Equity Fund", "MF", 315.0));
+        FALLBACK_MUTUAL_FUNDS.put("KOTAGEQE", new StockData("Kotak Emerging Equity Fund", "MF", 340.0));
+        FALLBACK_MUTUAL_FUNDS.put("LTFEQE", new StockData("L&T Equity Fund", "MF", 325.0));
+        FALLBACK_MUTUAL_FUNDS.put("RELIGEQE", new StockData("Reliance Equity Opportunity Fund", "MF", 360.0));
+        FALLBACK_MUTUAL_FUNDS.put("SBIEQE", new StockData("SBI Equity Fund", "MF", 300.0));
+        FALLBACK_MUTUAL_FUNDS.put("TAAEQE", new StockData("Tata Equity Fund", "MF", 320.0));
+        FALLBACK_MUTUAL_FUNDS.put("UTIEQE", new StockData("UTI Equity Fund", "MF", 340.0));
+        FALLBACK_MUTUAL_FUNDS.put("AAPLDEBT", new StockData("Aditya Birla Sun Life Debt Fund", "MF", 110.0));
+        FALLBACK_MUTUAL_FUNDS.put("HSBCDEBT", new StockData("HSBC Debt Fund", "MF", 108.0));
+        FALLBACK_MUTUAL_FUNDS.put("ICIDEBT", new StockData("ICICI Prudential Debt Fund", "MF", 109.0));
+        FALLBACK_MUTUAL_FUNDS.put("KOTADEBT", new StockData("Kotak Debt Fund", "MF", 107.0));
+        FALLBACK_MUTUAL_FUNDS.put("SBILOW", new StockData("SBI Liquid Fund", "MF", 1.05));
+        FALLBACK_MUTUAL_FUNDS.put("ICILIQUID", new StockData("ICICI Prudential Liquid Fund", "MF", 1.05));
+        FALLBACK_MUTUAL_FUNDS.put("RELIBALFUND", new StockData("Reliance Balanced Fund", "MF", 195.0));
+        FALLBACK_MUTUAL_FUNDS.put("SBIBALF", new StockData("SBI Balanced Fund", "MF", 185.0));
+        FALLBACK_MUTUAL_FUNDS.put("HDLOWDIV", new StockData("HDFC Low Duration Fund", "MF", 22.0));
+        FALLBACK_MUTUAL_FUNDS.put("AAXAINFRA", new StockData("Axis Infra Fund", "MF", 240.0));
     }
 
     // Static block to hold fallback crypto data
     private static final Map<String, StockData> FALLBACK_CRYPTO = new HashMap<>();
     static {
         // Top 50 Cryptocurrencies by Market Cap
-        FALLBACK_CRYPTO.put("bitcoin", new StockData("Bitcoin (BTC)", "CRYPTO", 5800000.0));
-        FALLBACK_CRYPTO.put("ethereum", new StockData("Ethereum (ETH)", "CRYPTO", 310000.0));
-        FALLBACK_CRYPTO.put("tether", new StockData("Tether (USDT)", "CRYPTO", 83.5));
-        FALLBACK_CRYPTO.put("binancecoin", new StockData("BNB (BNB)", "CRYPTO", 50000.0));
-        FALLBACK_CRYPTO.put("solana", new StockData("Solana (SOL)", "CRYPTO", 14000.0));
-        FALLBACK_CRYPTO.put("usd-coin", new StockData("USDC (USDC)", "CRYPTO", 83.5));
-        FALLBACK_CRYPTO.put("steth", new StockData("Lido Staked Ether (stETH)", "CRYPTO", 310000.0));
-        FALLBACK_CRYPTO.put("ripple", new StockData("XRP (XRP)", "CRYPTO", 45.0));
-        FALLBACK_CRYPTO.put("cardano", new StockData("Cardano (ADA)", "CRYPTO", 38.0));
-        FALLBACK_CRYPTO.put("dogecoin", new StockData("Dogecoin (DOGE)", "CRYPTO", 13.0));
-        FALLBACK_CRYPTO.put("tron", new StockData("TRON (TRX)", "CRYPTO", 10.0));
-        FALLBACK_CRYPTO.put("avalanche-2", new StockData("Avalanche (AVAX)", "CRYPTO", 3000.0));
-        FALLBACK_CRYPTO.put("shiba-inu", new StockData("Shiba Inu (SHIB)", "CRYPTO", 0.0020));
-        FALLBACK_CRYPTO.put("polkadot", new StockData("Polkadot (DOT)", "CRYPTO", 600.0));
-        FALLBACK_CRYPTO.put("chainlink", new StockData("Chainlink (LINK)", "CRYPTO", 1200.0));
-        FALLBACK_CRYPTO.put("bitcoin-cash", new StockData("Bitcoin Cash (BCH)", "CRYPTO", 40000.0));
-        FALLBACK_CRYPTO.put("uniswap", new StockData("Uniswap (UNI)", "CRYPTO", 950.0));
-        FALLBACK_CRYPTO.put("litecoin", new StockData("Litecoin (LTC)", "CRYPTO", 7000.0));
-        FALLBACK_CRYPTO.put("matic-network", new StockData("Polygon (MATIC)", "CRYPTO", 60.0));
-        FALLBACK_CRYPTO.put("near", new StockData("NEAR Protocol (NEAR)", "CRYPTO", 650.0));
-        FALLBACK_CRYPTO.put("internet-computer", new StockData("Internet Computer (ICP)", "CRYPTO", 1000.0));
-        FALLBACK_CRYPTO.put("ethereum-classic", new StockData("Ethereum Classic (ETC)", "CRYPTO", 2500.0));
-        FALLBACK_CRYPTO.put("stellar", new StockData("Stellar (XLM)", "CRYPTO", 9.0));
-        FALLBACK_CRYPTO.put("okb", new StockData("OKB (OKB)", "CRYPTO", 4000.0));
-        FALLBACK_CRYPTO.put("monero", new StockData("Monero (XMR)", "CRYPTO", 10000.0));
-        FALLBACK_CRYPTO.put("cosmos", new StockData("Cosmos (ATOM)", "CRYPTO", 700.0));
-        FALLBACK_CRYPTO.put("filecoin", new StockData("Filecoin (FIL)", "CRYPTO", 500.0));
-        FALLBACK_CRYPTO.put("crypto-com-chain", new StockData("Cronos (CRO)", "CRYPTO", 8.0));
-        FALLBACK_CRYPTO.put("hedera-hashgraph", new StockData("Hedera (HBAR)", "CRYPTO", 6.5));
-        FALLBACK_CRYPTO.put("algorand", new StockData("Algorand (ALGO)", "CRYPTO", 15.0));
-        FALLBACK_CRYPTO.put("quant-network", new StockData("Quant (QNT)", "CRYPTO", 6500.0));
-        FALLBACK_CRYPTO.put("the-graph", new StockData("The Graph (GRT)", "CRYPTO", 25.0));
-        FALLBACK_CRYPTO.put("fantom", new StockData("Fantom (FTM)", "CRYPTO", 70.0));
-        FALLBACK_CRYPTO.put("eos", new StockData("EOS (EOS)", "CRYPTO", 65.0));
-        FALLBACK_CRYPTO.put("tezos", new StockData("Tezos (XTZ)", "CRYPTO", 80.0));
-        FALLBACK_CRYPTO.put("aave", new StockData("Aave (AAVE)", "CRYPTO", 7500.0));
-        FALLBACK_CRYPTO.put("flow", new StockData("Flow (FLOW)", "CRYPTO", 75.0));
-        FALLBACK_CRYPTO.put("sand", new StockData("The Sandbox (SAND)", "CRYPTO", 38.0));
-        FALLBACK_CRYPTO.put("decentraland", new StockData("Decentraland (MANA)", "CRYPTO", 37.0));
-        FALLBACK_CRYPTO.put("axie-infinity", new StockData("Axie Infinity (AXS)", "CRYPTO", 650.0));
-        FALLBACK_CRYPTO.put("maker", new StockData("Maker (MKR)", "CRYPTO", 200000.0));
-        FALLBACK_CRYPTO.put("thorchain", new StockData("THORChain (RUNE)", "CRYPTO", 450.0));
-        FALLBACK_CRYPTO.put("kucoin-shares", new StockData("KuCoin Token (KCS)", "CRYPTO", 850.0));
-        FALLBACK_CRYPTO.put("zcash", new StockData("Zcash (ZEC)", "CRYPTO", 2000.0));
-        FALLBACK_CRYPTO.put("neo", new StockData("NEO (NEO)", "CRYPTO", 1200.0));
-        FALLBACK_CRYPTO.put("chiliz", new StockData("Chiliz (CHZ)", "CRYPTO", 12.0));
-        FALLBACK_CRYPTO.put("pancakeswap-token", new StockData("PancakeSwap (CAKE)", "CRYPTO", 200.0));
-        FALLBACK_CRYPTO.put("iota", new StockData("IOTA (IOTA)", "CRYPTO", 18.0));
-        FALLBACK_CRYPTO.put("enjincoin", new StockData("Enjin Coin (ENJ)", "CRYPTO", 28.0));
+        FALLBACK_CRYPTO.put("bitcoin", new StockData("Bitcoin (BTC)", "CRYPTO", 7312352.0));
+        FALLBACK_CRYPTO.put("ethereum", new StockData("Ethereum (ETH)", "CRYPTO", 203820.0));
+        FALLBACK_CRYPTO.put("tether", new StockData("Tether (USDT)", "CRYPTO", 83.6));
+        FALLBACK_CRYPTO.put("binancecoin", new StockData("BNB (BNB)", "CRYPTO", 48000.0));
+        FALLBACK_CRYPTO.put("solana", new StockData("Solana (SOL)", "CRYPTO", 15500.0));
+        FALLBACK_CRYPTO.put("usd-coin", new StockData("USDC (USDC)", "CRYPTO", 83.6));
+        FALLBACK_CRYPTO.put("steth", new StockData("Lido Staked Ether (stETH)", "CRYPTO", 203820.0));
+        FALLBACK_CRYPTO.put("ripple", new StockData("XRP (XRP)", "CRYPTO", 42.0));
+        FALLBACK_CRYPTO.put("cardano", new StockData("Cardano (ADA)", "CRYPTO", 35.0));
+        FALLBACK_CRYPTO.put("dogecoin", new StockData("Dogecoin (DOGE)", "CRYPTO", 11.5));
+        FALLBACK_CRYPTO.put("tron", new StockData("TRON (TRX)", "CRYPTO", 10.5));
+        FALLBACK_CRYPTO.put("avalanche-2", new StockData("Avalanche (AVAX)", "CRYPTO", 2800.0));
+        FALLBACK_CRYPTO.put("shiba-inu", new StockData("Shiba Inu (SHIB)", "CRYPTO", 0.0018));
+        FALLBACK_CRYPTO.put("polkadot", new StockData("Polkadot (DOT)", "CRYPTO", 550.0));
+        FALLBACK_CRYPTO.put("chainlink", new StockData("Chainlink (LINK)", "CRYPTO", 1300.0));
+        FALLBACK_CRYPTO.put("bitcoin-cash", new StockData("Bitcoin Cash (BCH)", "CRYPTO", 38000.0));
+        FALLBACK_CRYPTO.put("uniswap", new StockData("Uniswap (UNI)", "CRYPTO", 1050.0));
+        FALLBACK_CRYPTO.put("litecoin", new StockData("Litecoin (LTC)", "CRYPTO", 6500.0));
+        FALLBACK_CRYPTO.put("matic-network", new StockData("Polygon (MATIC)", "CRYPTO", 55.0));
+        FALLBACK_CRYPTO.put("near", new StockData("NEAR Protocol (NEAR)", "CRYPTO", 700.0));
+        FALLBACK_CRYPTO.put("internet-computer", new StockData("Internet Computer (ICP)", "CRYPTO", 950.0));
+        FALLBACK_CRYPTO.put("ethereum-classic", new StockData("Ethereum Classic (ETC)", "CRYPTO", 2300.0));
+        FALLBACK_CRYPTO.put("stellar", new StockData("Stellar (XLM)", "CRYPTO", 8.5));
+        FALLBACK_CRYPTO.put("okb", new StockData("OKB (OKB)", "CRYPTO", 3800.0));
+        FALLBACK_CRYPTO.put("monero", new StockData("Monero (XMR)", "CRYPTO", 9500.0));
+        FALLBACK_CRYPTO.put("cosmos", new StockData("Cosmos (ATOM)", "CRYPTO", 650.0));
+        FALLBACK_CRYPTO.put("filecoin", new StockData("Filecoin (FIL)", "CRYPTO", 450.0));
+        FALLBACK_CRYPTO.put("crypto-com-chain", new StockData("Cronos (CRO)", "CRYPTO", 7.5));
+        FALLBACK_CRYPTO.put("hedera-hashgraph", new StockData("Hedera (HBAR)", "CRYPTO", 6.0));
+        FALLBACK_CRYPTO.put("algorand", new StockData("Algorand (ALGO)", "CRYPTO", 13.5));
+        FALLBACK_CRYPTO.put("quant-network", new StockData("Quant (QNT)", "CRYPTO", 6000.0));
+        FALLBACK_CRYPTO.put("the-graph", new StockData("The Graph (GRT)", "CRYPTO", 22.0));
+        FALLBACK_CRYPTO.put("fantom", new StockData("Fantom (FTM)", "CRYPTO", 65.0));
+        FALLBACK_CRYPTO.put("eos", new StockData("EOS (EOS)", "CRYPTO", 60.0));
+        FALLBACK_CRYPTO.put("tezos", new StockData("Tezos (XTZ)", "CRYPTO", 75.0));
+        FALLBACK_CRYPTO.put("aave", new StockData("Aave (AAVE)", "CRYPTO", 7000.0));
+        FALLBACK_CRYPTO.put("flow", new StockData("Flow (FLOW)", "CRYPTO", 65.0));
+        FALLBACK_CRYPTO.put("sand", new StockData("The Sandbox (SAND)", "CRYPTO", 35.0));
+        FALLBACK_CRYPTO.put("decentraland", new StockData("Decentraland (MANA)", "CRYPTO", 32.0));
+        FALLBACK_CRYPTO.put("axie-infinity", new StockData("Axie Infinity (AXS)", "CRYPTO", 550.0));
+        FALLBACK_CRYPTO.put("maker", new StockData("Maker (MKR)", "CRYPTO", 185000.0));
+        FALLBACK_CRYPTO.put("thorchain", new StockData("THORChain (RUNE)", "CRYPTO", 400.0));
+        FALLBACK_CRYPTO.put("kucoin-shares", new StockData("KuCoin Token (KCS)", "CRYPTO", 800.0));
+        FALLBACK_CRYPTO.put("zcash", new StockData("Zcash (ZEC)", "CRYPTO", 1800.0));
+        FALLBACK_CRYPTO.put("neo", new StockData("NEO (NEO)", "CRYPTO", 1050.0));
+        FALLBACK_CRYPTO.put("chiliz", new StockData("Chiliz (CHZ)", "CRYPTO", 10.5));
+        FALLBACK_CRYPTO.put("pancakeswap-token", new StockData("PancakeSwap (CAKE)", "CRYPTO", 180.0));
+        FALLBACK_CRYPTO.put("iota", new StockData("IOTA (IOTA)", "CRYPTO", 16.5));
+        FALLBACK_CRYPTO.put("enjincoin", new StockData("Enjin Coin (ENJ)", "CRYPTO", 25.0));
     }
 
     // Fallback stock data with live prices
@@ -627,7 +629,9 @@ public class SearchController {
         if (query.isEmpty()) {
             return true;
         }
-        return symbol.contains(query) || name.contains(query);
+        String lowerQuery = query.toLowerCase();
+        return (symbol != null && symbol.toLowerCase().contains(lowerQuery)) || 
+               (name != null && name.toLowerCase().contains(lowerQuery));
     }
 
     private Map<String, Object> createStockMap(String symbol, StockData data) {
