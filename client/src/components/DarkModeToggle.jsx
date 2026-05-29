@@ -9,22 +9,14 @@ export default function DarkModeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="relative inline-flex items-center h-8 w-14 rounded-full bg-gray-200 dark:bg-slate-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-900"
+      className="p-2 text-slate-500 hover:text-cyan-600 dark:text-slate-400 dark:hover:text-cyan-400 transition-all hover:scale-110 active:scale-95 flex items-center justify-center focus:outline-none"
       aria-label={isDark ? "Activate light mode" : "Activate dark mode"}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      <span
-        className={`absolute left-1 transition-transform duration-300 ease-in-out
-          ${isDark ? "translate-x-6" : "translate-x-0"}
-        `}
-      >
-        <span className="flex items-center justify-center h-6 w-6 rounded-full bg-white shadow-md">
-          {isDark 
-            ? <Moon className="w-4 h-4 text-blue-500" /> 
-            : <Sun className="w-4 h-4 text-yellow-500" />
-          }
-        </span>
-      </span>
+      {isDark 
+        ? <Sun className="w-5 h-5 transition-transform duration-300 hover:rotate-90" /> 
+        : <Moon className="w-5 h-5 transition-transform duration-300 hover:-rotate-12" />
+      }
     </button>
   );
 }

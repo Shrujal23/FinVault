@@ -58,7 +58,7 @@ export default function ResetPasswordForm({ token: propToken, onDone }) {
                     password
                 }
             });
-            setSuccess(res.message || 'Password has been reset successfully');
+            setSuccess(res.message || "Password reset. You're good to go.");
             // Optionally redirect to login
             setTimeout(() => {
                 if (onDone) onDone();
@@ -100,8 +100,8 @@ export default function ResetPasswordForm({ token: propToken, onDone }) {
         <form onSubmit={onSubmit} className="max-w-md mx-auto p-6 bg-white dark:bg-slate-800 rounded-xl shadow space-y-4">
             <div className="text-center space-y-2">
                 <Lock className="w-8 h-8 mx-auto text-blue-600" />
-                <h3 className="text-2xl font-bold">Choose a new password</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Enter a strong password and confirm to finish resetting your account password.</p>
+                <h3 className="text-2xl font-bold">Set new password</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Make it strong, make it memorable.</p>
             </div>
 
             {error && (
@@ -122,7 +122,7 @@ export default function ResetPasswordForm({ token: propToken, onDone }) {
                 <input type="password" value={confirm} onChange={(e)=>setConfirm(e.target.value)} className="w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-800/50" />
             </div>
 
-            <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl text-white font-semibold bg-blue-600 hover:bg-blue-700">
+            <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl text-white font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 transition-all shadow-sm">
                 {loading ? 'Resetting...' : 'Reset Password'}
             </button>
 

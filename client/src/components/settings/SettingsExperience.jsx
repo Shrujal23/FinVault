@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Settings,
   User,
@@ -14,7 +14,6 @@ import {
   Trash,
   Check,
   X,
-  Sparkles,
   Mail,
   Lock,
   LayoutDashboard,
@@ -30,16 +29,16 @@ const settingsNav = [
   { id: 'security', icon: Shield, label: 'Security' },
 ];
 
-const usBrokers = [
-  { name: 'Alpaca', description: 'US stocks & crypto', logo: 'https://thewealthmosaic.s3.amazonaws.com/media/Logo_Alpaca.png' },
-  { name: 'Interactive Brokers', description: 'Global markets', logo: 'https://download.logo.wine/logo/Interactive_Brokers/Interactive_Brokers-Logo.wine.png', logoBg: 'bg-white' },
-  { name: 'Tradier', description: 'US stocks & options', logo: 'https://images.squarespace-cdn.com/content/v1/5f5d9506e0415a490b9b21af/1607533064474-RWXPWUA2S5KHIJVF0COJ/tradier-brokerage-vectorwithborders1500.jpg' },
+const indiaBrokers = [
+  { name: 'Zerodha', description: "India's #1 Broker", logo: 'https://zerodha.com/static/images/logo.svg', logoBg: 'bg-white', connected: true },
+  { name: 'Upstox', description: 'Fast & Reliable', logo: 'https://upstox.com/assets/img/upstox-logo.svg', logoBg: 'bg-white', connected: false },
+  { name: 'Angel One', description: 'Smart Investing', logo: 'https://static.angelone.in/images/angel-one-logo.svg', logoBg: 'bg-white', connected: false },
 ];
 
-const indiaBrokers = [
-  { name: 'Zerodha', logo: 'https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3364650981555585409' },
-  { name: 'Upstox', logo: 'https://mma.prnewswire.com/media/1474809/Upstox_Logo.jpg' },
-  { name: 'Angel One', logo: 'https://www.exchange4media.com/news-photo/115218-angel.jpg' },
+const usBrokers = [
+  { name: 'Interactive Brokers', description: 'Global Access', logo: 'https://download.logo.wine/logo/Interactive_Brokers/Interactive_Brokers-Logo.wine.png', logoBg: 'bg-white', connected: false },
+  { name: 'Alpaca', description: 'US Markets & Crypto', logo: 'https://thewealthmosaic.s3.amazonaws.com/media/Logo_Alpaca.png', connected: false },
+  { name: 'Tradier', description: 'US Stocks & Options', logo: 'https://images.squarespace-cdn.com/content/v1/5f5d9506e0415a490b9b21af/1607533064474-RWXPWUA2S5KHIJVF0COJ/tradier-brokerage-vectorwithborders1500.jpg', connected: false },
 ];
 
 const settingsItems = [
@@ -50,50 +49,58 @@ const settingsItems = [
   { id: 'billing', icon: CreditCard, title: 'Billing & plan', description: 'Subscription and invoices', action: 'billing', chevron: true, group: 'Plan' },
 ];
 
-function BrokerItem({ name, description, logo, logoBg = '' }) {
+function BrokerItem({ name, description, logo, logoBg = '', connected }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white/60 dark:bg-slate-800/40 hover:border-cyan-500/50 dark:hover:border-cyan-500/40 transition">
-      <div className="flex items-center gap-4 min-w-0">
-        <img src={logo} alt="" className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-contain shrink-0 ${logoBg}`} />
+    <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border-2 transition-all duration-200 ${
+      connected 
+        ? 'border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-900/10' 
+        : 'border-dashed border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 hover:border-cyan-500/50'
+    }`}>
+      <div className="flex items-center gap-5 flex-1 min-w-0 mb-4 sm:mb-0">
+        <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden ${logoBg || 'bg-slate-100 dark:bg-slate-800'}`}>
+          <img
+            src={logo}
+            alt={`${name} logo`}
+            className="w-10 h-10 object-contain"
+            onError={(e) => { e.target.src = '/placeholder-broker.png'; }} // fallback
+          />
+        </div>
         <div className="min-w-0">
-          <p className="font-semibold text-slate-900 dark:text-white truncate">{name}</p>
+          <p className="font-semibold text-slate-900 dark:text-white text-lg">{name}</p>
           <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
         </div>
       </div>
-      <button type="button" aria-label={`Connect ${name}`} className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-medium hover:from-cyan-500 hover:to-blue-500 transition shrink-0">
-        Connect
-      </button>
-    </div>
-  );
-}
-
-function BrokerGridItem({ name, logo }) {
-  return (
-    <div className="flex flex-col items-center p-3 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white/60 dark:bg-slate-800/40 hover:border-cyan-500/50 transition">
-      <img src={logo} alt="" className="w-14 h-14 mb-2 object-contain" />
-      <p className="font-medium text-slate-900 dark:text-white text-sm text-center">{name}</p>
-      <button type="button" aria-label={`Connect ${name}`} className="mt-2 text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:underline">
-        Connect
-      </button>
+      {connected ? (
+        <span className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-100/50 dark:bg-emerald-900/20">
+          <Check className="w-5 h-5" /> Connected
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="w-full sm:w-auto px-8 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-semibold hover:from-cyan-500 hover:to-blue-500 transition shadow-sm"
+        >
+          Connect
+        </button>
+      )}
     </div>
   );
 }
 
 function ToggleRow({ label, description, enabled, onChange }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-4 border-b border-slate-200/80 dark:border-slate-700 last:border-0">
-      <div className="min-w-0">
-        <p className="font-medium text-slate-900 dark:text-white text-sm sm:text-base">{label}</p>
-        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
+    <div className="flex items-center justify-between py-5 border-b border-slate-200 dark:border-slate-700 last:border-none">
+      <div>
+        <p className="font-medium text-slate-900 dark:text-white">{label}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={enabled}
         onClick={() => onChange(!enabled)}
-        className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${enabled ? 'bg-cyan-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+        className={`relative w-12 h-7 rounded-full transition-all ${enabled ? 'bg-cyan-600' : 'bg-slate-300 dark:bg-slate-600'}`}
       >
-        <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${enabled ? 'left-6' : 'left-1'}`} />
+        <span className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-all ${enabled ? 'translate-x-5' : ''}`} />
       </button>
     </div>
   );
@@ -102,105 +109,124 @@ function ToggleRow({ label, description, enabled, onChange }) {
 export default function SettingsExperience({ variant = 'modal', auth, setCurrentPage, onClose }) {
   const [activeSection, setActiveSection] = useState('main');
   const { theme, toggleTheme } = useTheme();
+  
   const [preview, setPreview] = useState(auth?.user?.avatarUrl || '');
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef();
   const [displayName, setDisplayName] = useState(auth?.user?.name || '');
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
 
-  const [notifPrice, setNotifPrice] = useState(() => localStorage.getItem('settings.notif.price') === '1');
+  // Notification preferences
+  const [notifPrice, setNotifPrice] = useState(() => localStorage.getItem('settings.notif.price') !== '0');
   const [notifDividend, setNotifDividend] = useState(() => localStorage.getItem('settings.notif.dividend') === '1');
   const [notifWeekly, setNotifWeekly] = useState(() => localStorage.getItem('settings.notif.weekly') !== '0');
 
+  // Sync user data when auth changes
   useEffect(() => {
-    setPreview(auth?.user?.avatarUrl || '');
-    setDisplayName(auth?.user?.name || '');
-  }, [auth?.user?.avatarUrl, auth?.user?.name]);
+    if (auth?.user) {
+      setPreview(auth.user.avatarUrl || '');
+      setDisplayName(auth.user.name || '');
+    }
+  }, [auth?.user]);
 
+  // Persist notification prefs
   useEffect(() => {
     localStorage.setItem('settings.notif.price', notifPrice ? '1' : '0');
   }, [notifPrice]);
+
   useEffect(() => {
     localStorage.setItem('settings.notif.dividend', notifDividend ? '1' : '0');
   }, [notifDividend]);
+
   useEffect(() => {
     localStorage.setItem('settings.notif.weekly', notifWeekly ? '1' : '0');
   }, [notifWeekly]);
 
   const openFilePicker = () => fileRef.current?.click();
 
-  const onFileChange = (e) => {
-    const f = e.target.files?.[0];
-    if (f) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreview(ev.target.result);
-      reader.readAsDataURL(f);
-    }
-  };
+  const onFileChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const saveProfile = async () => {
+    const reader = new FileReader();
+    reader.onload = (ev) => setPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const saveProfile = useCallback(async () => {
     setUploading(true);
     try {
-      const nextName = displayName.trim();
-      auth.setUser({ ...auth.user, name: nextName || auth.user?.name, avatarUrl: preview || auth.user?.avatarUrl });
+      const updatedUser = {
+        ...auth.user,
+        name: displayName.trim() || auth.user?.name,
+        avatarUrl: preview || auth.user?.avatarUrl
+      };
+      
+      auth.setUser(updatedUser);
+
       if (auth?.token) {
-        try {
-          const body = { name: nextName };
-          if (preview) body.avatarBase64 = preview;
-          await apiRequest('/api/user/profile', { method: 'PUT', body, token: auth.token });
-        } catch {
-          /* optional API */
-        }
+        await apiRequest('/api/user/profile', {
+          method: 'PUT',
+          body: { 
+            name: displayName.trim(),
+            avatarBase64: preview 
+          },
+          token: auth.token
+        });
       }
+
       if (variant === 'modal') setActiveSection('main');
+    } catch (err) {
+      console.error('Failed to save profile', err);
+      // You could add a toast here
     } finally {
       setUploading(false);
     }
-  };
+  }, [displayName, preview, auth, variant]);
 
-  const removePhoto = () => {
+  const removePhoto = useCallback(() => {
     setPreview('');
     auth.setUser({ ...auth.user, avatarUrl: '' });
+    
     if (auth?.token) {
-      apiRequest('/api/user/profile', { method: 'PUT', body: { avatarBase64: '' }, token: auth.token }).catch(() => {});
+      apiRequest('/api/user/profile', { 
+        method: 'PUT', 
+        body: { avatarBase64: '' }, 
+        token: auth.token 
+      }).catch(() => {});
     }
-  };
+  }, [auth]);
 
-  const goBilling = () => {
-    onClose?.();
-    setCurrentPage?.('billing');
-  };
-
-  const handleItemClick = (item) => {
+  const handleItemClick = useCallback((item) => {
     if (item.action === 'brokers') {
       setActiveSection('brokers');
-      return;
+    } else if (item.action === 'billing') {
+      onClose?.();
+      setCurrentPage?.('billing');
+    } else if (item.action) {
+      setActiveSection(item.action);
     }
-    if (item.action === 'billing') {
-      goBilling();
-      return;
-    }
-    if (item.action) setActiveSection(item.action);
-  };
+  }, [onClose, setCurrentPage]);
 
-  const grouped = settingsItems.reduce((acc, item) => {
+  const groupedSettings = useMemo(() => {
+    const grouped = settingsItems.reduce((acc, item) => {
     const g = item.group || 'Other';
     if (!acc[g]) acc[g] = [];
     acc[g].push(item);
     return acc;
-  }, {});
+    }, {});
+    return grouped;
+  }, []);
 
-  const sectionTitle =
-    activeSection === 'main'
-      ? 'Settings'
-      : activeSection === 'profile'
-        ? 'Profile'
-        : activeSection === 'brokers'
-          ? 'Broker connections'
-          : activeSection === 'notifications'
-            ? 'Alerts & notifications'
-            : activeSection === 'security'
-              ? 'Security'
-              : 'Settings';
+  const sectionTitle = useMemo(() => {
+    const titles = {
+      main: 'Settings',
+      profile: 'Profile',
+      brokers: 'Broker connections',
+      notifications: 'Alerts & notifications',
+      security: 'Security'
+    };
+    return titles[activeSection] || 'Settings';
+  }, [activeSection]);
 
   const inner = (
     <div className={`flex min-h-0 flex-1 flex-col ${variant === 'page' ? 'lg:flex-row' : ''}`}>
@@ -226,7 +252,7 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
           <div className="mt-auto pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-1">
             <button
               type="button"
-              onClick={goBilling}
+              onClick={() => handleItemClick({ action: 'billing' })}
               className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-white/80 dark:hover:bg-slate-800/60"
             >
               <CreditCard className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
@@ -293,7 +319,7 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={goBilling}
+                      onClick={() => handleItemClick({ action: 'billing' })}
                       className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-cyan-500 hover:to-blue-500"
                     >
                       <CreditCard className="w-4 h-4" />
@@ -315,7 +341,7 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
             <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-transparent to-indigo-500/10 p-4 sm:p-5">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-700 dark:text-cyan-400">
-                  <Sparkles className="w-5 h-5" />
+                  
                 </div>
                 <div>
                   <p className="font-semibold text-slate-900 dark:text-white">FinVault preferences</p>
@@ -326,7 +352,7 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
               </div>
             </div>
 
-            {Object.entries(grouped).map(([group, items]) => (
+            {Object.entries(groupedSettings).map(([group, items]) => (
               <div key={group}>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1 mb-2">{group}</p>
                 <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden bg-white/90 dark:bg-slate-900/80 divide-y divide-slate-200/80 dark:divide-slate-800">
@@ -358,8 +384,7 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="text-slate-600 dark:text-slate-400">
-                    <Sun className="w-5 h-5 hidden dark:block" />
-                    <Moon className="w-5 h-5 block dark:hidden" />
+                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                   </div>
                   <div>
                     <p className="font-semibold text-slate-900 dark:text-white">Appearance</p>
@@ -370,9 +395,9 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
                   type="button"
                   onClick={toggleTheme}
                   aria-label="Toggle theme"
-                  className="relative h-8 w-14 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600 transition-colors"
+                  className="p-2 text-slate-500 hover:text-cyan-600 dark:text-slate-400 dark:hover:text-cyan-400 transition-all hover:scale-110 active:scale-95 focus:outline-none flex items-center justify-center"
                 >
-                  <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all ${theme === 'light' ? 'left-1' : 'left-7'}`} />
+                  {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
               </div>
             </div>
@@ -443,18 +468,28 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
 
         {activeSection === 'brokers' && (
           <div className="p-4 sm:p-6 space-y-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400 text-center sm:text-left max-w-2xl">
-              Connect read-only where available. FinVault never stores your broker login password—only secure tokens you approve.
-            </p>
-            <div className="grid gap-4">
-              {usBrokers.map((b) => (
-                <BrokerItem key={b.name} {...b} />
-              ))}
-              <p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-500 pt-2">Popular in India</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                {indiaBrokers.map((b) => (
-                  <BrokerGridItem key={b.name} {...b} />
-                ))}
+            <div className="max-w-3xl space-y-8">
+              <div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                  Automatically sync your holdings and transactions from supported brokers. FinVault connects securely via API and never stores your login credentials.
+                </p>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Indian Markets</h4>
+                  <div className="grid gap-4">
+                    {indiaBrokers.map((b) => (
+                      <BrokerItem key={b.name} {...b} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">Global Markets & Crypto</h4>
+                <div className="grid gap-4">
+                  {usBrokers.map((b) => (
+                    <BrokerItem key={b.name} {...b} />
+                  ))}
+                </div>
               </div>
             </div>
           </div>

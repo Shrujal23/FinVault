@@ -33,7 +33,7 @@ export default function ForgotPasswordForm({ onSwitchToLogin }) {
             // If server returned resetToken (dev mode), show it so developer can click through
             if (data?.resetToken) {
                 setSuccess(
-                    `Reset link generated — click to open or copy token: ${data.resetToken}`
+                    `Reset link ready — click below or copy: ${data.resetToken}`
                 );
                 // attach token to local state so we can open it quickly
                 setTimeout(() => {
@@ -43,16 +43,16 @@ export default function ForgotPasswordForm({ onSwitchToLogin }) {
             } else {
                 setSuccess(
                     method === 'email'
-                        ? (data.message || 'If an account with that email exists, a reset link has been sent.')
-                        : (data.message || 'If an account with that phone number exists, a reset code has been sent.')
+                        ? (data.message || "If that email is in our system, a reset link is on the way.")
+                        : (data.message || "If that number is in our system, a reset code is on the way.")
                 );
             }
         } catch (err) {
             // Security: always show generic success to prevent enumeration
             setSuccess(
                 method === 'email'
-                    ? 'If an account with that email exists, a reset link has been sent.'
-                    : 'If an account with that phone number exists, a reset code has been sent.'
+                    ? "If that email is in our system, a reset link is on the way."
+                    : "If that number is in our system, a reset code is on the way."
             );
         } finally {
             setLoading(false);
@@ -66,10 +66,10 @@ export default function ForgotPasswordForm({ onSwitchToLogin }) {
             {/* Header */}
             <div className="text-center space-y-2">
                 <h3 className="text-2xl font-bold text-slate-800 dark:text-white">
-                    Reset Your Password
+                    Reset Password
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Choose how you'd like to receive your password reset instructions.
+                    Where should we send your recovery link?
                 </p>
             </div>
 
@@ -118,7 +118,7 @@ export default function ForgotPasswordForm({ onSwitchToLogin }) {
                         onChange={(e) => method === 'email' ? setEmail(e.target.value) : setPhone(e.target.value)}
                         required
                         autoComplete={method === 'email' ? 'email' : 'tel'}
-                        placeholder={method === 'email' ? 'you@company.com' : '+1 (555) 000-1234'}
+                        placeholder={method === 'email' ? 'you@company.com' : '+91 98765 43210'}
                         className="w-full px-4 py-3 pl-11 rounded-xl border
                                    bg-slate-50 dark:bg-slate-800/50
                                    border-slate-300 dark:border-slate-700
@@ -169,11 +169,10 @@ export default function ForgotPasswordForm({ onSwitchToLogin }) {
             <button
                 type="submit"
                 disabled={loading || !isValidInput}
-                className="w-full py-3 rounded-lg text-white font-semibold
-                           bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500
-                           disabled:bg-slate-400 disabled:cursor-not-allowed
-                           shadow-sm
-                           transition-colors
+                className="w-full py-3.5 rounded-2xl text-white font-semibold
+                           bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500
+                           disabled:opacity-60 disabled:cursor-not-allowed
+                           shadow-sm transition-all
                            flex items-center justify-center gap-3"
             >
                 {loading ? (

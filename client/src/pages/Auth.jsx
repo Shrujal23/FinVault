@@ -29,9 +29,9 @@ export default function AuthPage({ auth }) {
                         </h1>
                     </div>
                     <p className="text-gray-600 dark:text-gray-400">
-                        {mode === 'login' && 'Welcome back! Sign in to continue.'}
-                        {mode === 'register' && 'Create an account to start managing your portfolio.'}
-                        {mode === 'forgot' && 'Reset your account password.'}
+                        {mode === 'login' && 'Welcome back. Enter your details below.'}
+                        {mode === 'register' && 'Create an account and take control of your wealth.'}
+                        {mode === 'forgot' && 'Happens to the best of us. Let’s get you back in.'}
                     </p>
                 </div>
 

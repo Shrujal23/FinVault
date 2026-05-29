@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { Sun, Moon } from 'lucide-react';
 
 export default function ThemeToggle() {
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark');
@@ -18,13 +18,13 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={() => setDark(v => !v)}
-      className="p-2 rounded bg-white dark:bg-gray-800 dark:text-gray-100 flex items-center justify-center"
+      className="p-2 text-slate-500 hover:text-cyan-600 dark:text-slate-400 dark:hover:text-cyan-400 transition-all hover:scale-110 active:scale-95 flex items-center justify-center focus:outline-none"
       title="Toggle theme"
     >
       {dark ? (
-        <MoonIcon className="h-6 w-6" />
+        <Sun className="h-5 w-5" />
       ) : (
-        <SunIcon className="h-6 w-6" />
+        <Moon className="h-5 w-5" />
       )}
     </button>
   );

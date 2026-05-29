@@ -8,25 +8,19 @@ import { CardsSkeleton, TableSkeleton } from '../components/Skeleton.jsx';
 import MarketNews from '../components/MarketNews.jsx';
 import Watchlist from '../components/Watchlist.jsx';
 import {
-  ArrowUpRight,
-  ArrowDownRight,
   Wallet,
   PieChart,
   PlusCircle,
   Newspaper,
   Target,
-  TrendingUp,
   History,
   RefreshCw,
-  Link,
-  CheckCircle,
   AlertCircle,
-  XCircle,
-  Play,
-  Pause,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
-export default function Dashboard({ auth }) {
+export default function Dashboard({ auth, setCurrentPage }) {
   const { token, user } = auth;
   const [assets, setAssets] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -34,15 +28,18 @@ export default function Dashboard({ auth }) {
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showBrokerModal, setShowBrokerModal] = useState(false);
-  const [activeBrokerSection, setActiveBrokerSection] = useState('main');
+  const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
 
   // Compact mode for denser dashboard layout (persisted)
   const [compactMode, setCompactMode] = useState(() => localStorage.getItem('dashboard.compact') === 'true');
   useEffect(() => { localStorage.setItem('dashboard.compact', compactMode ? 'true' : 'false'); }, [compactMode]);
 
   const refreshData = async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      setIsRefreshing(false);
+      return;
+    }
     try {
       setIsRefreshing(true);
       setLoading(true);
@@ -89,17 +86,6 @@ export default function Dashboard({ auth }) {
     return { ...totals, pnl, returnPct, items: itemsWithId };
   }, [summary, assets]);
 
-  const topMovers = useMemo(() => {
-    if (!metrics?.items) return { gainers: [], losers: [] };
-    const sorted = [...metrics.items]
-      .filter(i => i.change_pct_1d != null)
-      .sort((a, b) => b.change_pct_1d - a.change_pct_1d);
-    return {
-      gainers: sorted.slice(0, 4),
-      losers: sorted.slice(-4).reverse(),
-    };
-  }, [metrics]);
-
   const userName = user?.name || user?.email?.split('@')[0] || 'Investor';
   const portfolioHealth = !metrics
     ? 'Sync your portfolio to see insights'
@@ -113,143 +99,9 @@ export default function Dashboard({ auth }) {
     day: 'numeric',
   });
 
-  // Selection state used to link movers <-> holdings table
+  // Selection state used to link holdings table
   const [selectedSymbol, setSelectedSymbol] = useState(null);
   const [hoveredSymbol, setHoveredSymbol] = useState(null);
-  const [moversAutoplay, setMoversAutoplay] = useState(false);
-
-  // Autoplay: cycle selection across top movers when enabled
-  useEffect(() => {
-    if (!moversAutoplay) return;
-    const flat = [...topMovers.gainers, ...topMovers.losers].filter(Boolean);
-    if (!flat.length) return;
-    let idx = 0;
-    const tick = () => {
-      setSelectedSymbol(flat[idx % flat.length].symbol);
-      idx += 1;
-    };
-    // start immediately
-    tick();
-    const id = setInterval(tick, 3000);
-    return () => clearInterval(id);
-  }, [moversAutoplay, topMovers]);
-
-  // Mock connected brokers - replace with real API later
-  const connectedBrokers = {
-    zerodha: true,
-    upstox: false,
-    alpaca: false,
-    interactive: true,
-  };
-
-  const BrokerModal = () => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-md" onClick={() => setShowBrokerModal(false)} />
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            {activeBrokerSection === 'brokers' && (
-              <button type="button" onClick={() => setActiveBrokerSection('main')} aria-label="Back" className="p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-800">
-                <ArrowLeft className="w-6 h-6" />
-              </button>
-            )}
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <Link className="w-7 h-7 text-blue-600 dark:text-cyan-400" />
-              {activeBrokerSection === 'main' ? 'Link Broker Account' : 'Available Brokers'}
-            </h3>
-          </div>
-          <button type="button" onClick={() => setShowBrokerModal(false)} aria-label="Close" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800">
-            <XCircle className="w-6 h-6" />
-          </button>
-        </div>
-
-        {activeBrokerSection === 'main' && (
-          <div className="p-8 text-center space-y-6">
-            <p className="text-lg text-gray-600 dark:text-gray-400">
-              Automatically sync your holdings and transactions from supported brokers.
-            </p>
-            <button
-              type="button"
-              aria-label="View supported brokers"
-              onClick={() => setActiveBrokerSection('brokers')}
-              className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition"
-            >
-              View Supported Brokers
-            </button>
-          </div>
-        )}
-
-        {activeBrokerSection === 'brokers' && (
-          <div className="p-6 space-y-6 max-h-96 overflow-y-auto">
-            <p className="text-center text-gray-600 dark:text-gray-400">
-              Connect securely via API — we never store your login credentials.
-            </p>
-            <div className="grid gap-4">
-              {/* Zerodha */}
-              <div className="flex items-center justify-between p-5 rounded-2xl border-2 border-dashed hover:border-blue-500 transition">
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center text-white font-bold">Z</div>
-                  <div>
-                    <p className="font-semibold">Zerodha</p>
-                    <p className="text-sm text-gray-500">India's #1 Broker</p>
-                  </div>
-                </div>
-                {connectedBrokers.zerodha ? (
-                  <span className="flex items-center gap-2 text-green-600 font-medium">
-                    <CheckCircle className="w-5 h-5" /> Connected
-                  </span>
-                ) : (
-                  <button type="button" aria-label="Connect Zerodha" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Connect</button>
-                )}
-              </div>
-
-              {/* Upstox */}
-              <div className="flex items-center justify-between p-5 rounded-2xl border-2 border-dashed hover:border-blue-500 transition">
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center text-white font-bold">U</div>
-                  <div>
-                    <p className="font-semibold">Upstox</p>
-                    <p className="text-sm text-gray-500">Fast & Reliable</p>
-                  </div>
-                </div>
-                <button type="button" aria-label="Connect Upstox" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Connect</button>
-              </div>
-
-              {/* Alpaca */}
-              <div className="flex items-center justify-between p-5 rounded-2xl border-2 border-dashed hover:border-blue-500 transition">
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold">A</div>
-                  <div>
-                    <p className="font-semibold">Alpaca</p>
-                    <p className="text-sm text-gray-500">US Markets & Crypto</p>
-                  </div>
-                </div>
-                <button type="button" aria-label="Connect Alpaca" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Connect</button>
-              </div>
-
-              {/* Interactive Brokers */}
-              <div className="flex items-center justify-between p-5 rounded-2xl border-2 border-dashed hover:border-blue-500 transition">
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 bg-blue-800 rounded-lg flex items-center justify-center text-white font-bold">IB</div>
-                  <div>
-                    <p className="font-semibold">Interactive Brokers</p>
-                    <p className="text-sm text-gray-500">Global Access</p>
-                  </div>
-                </div>
-                {connectedBrokers.interactive ? (
-                  <span className="flex items-center gap-2 text-green-600 font-medium">
-                    <CheckCircle className="w-5 h-5" /> Connected
-                  </span>
-                ) : (
-                  <button type="button" aria-label="Connect Interactive Brokers" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Connect</button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-blue-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 pb-12">
@@ -270,6 +122,24 @@ export default function Dashboard({ auth }) {
           </div>
 
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 shrink-0">
+            {token && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddAssetOpen(true);
+                  setTimeout(() => {
+                    const el = document.querySelector('#add-asset-section');
+                    if (el && typeof el.scrollIntoView === 'function') {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }, 50);
+                }}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg shadow-sm font-medium transition-all"
+              >
+                <PlusCircle className="w-5 h-5" />
+                <span>Add Asset</span>
+              </button>
+            )}
             <button
               type="button"
               aria-pressed={compactMode}
@@ -305,7 +175,74 @@ export default function Dashboard({ auth }) {
           </div>
         )}
 
-        {/* Home quick insights */}
+        {/* Guest Banner */}
+        {!token && (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-800/50 rounded-lg text-blue-600 dark:text-blue-400 shrink-0">
+                <Wallet className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-800 dark:text-slate-200">You're in guest mode</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Log in or register to save your portfolio data securely and access it across all your devices.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCurrentPage?.('settings')}
+              className="shrink-0 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition shadow-sm"
+            >
+              Login / Register
+            </button>
+          </div>
+        )}
+
+        {/* Onboarding empty state when no assets */}
+        {!loading && !error && (!metrics || !metrics.items?.length) && (
+          <div className="bg-white dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
+                Welcome to FinVault
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                Get started by adding your first asset. We&apos;ll calculate your portfolio value, P&amp;L, and allocation automatically.
+              </p>
+              <ul className="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1">
+                <li>Track stocks, mutual funds, and crypto in one place</li>
+                <li>See real-time gains and losses</li>
+                <li>Visualize your diversification and performance</li>
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddAssetOpen(true);
+                setTimeout(() => {
+                  const el = document.querySelector('#add-asset-section');
+                  if (el && typeof el.scrollIntoView === 'function') {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }, 50);
+              }}
+              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500 shadow-sm font-medium text-sm whitespace-nowrap transition-all"
+            >
+              Add your first asset
+            </button>
+          </div>
+        )}
+
+        {/* 1. Primary Metrics: Summary Cards */}
+        {loading ? <CardsSkeleton /> : metrics && (
+          <DashboardCards
+            compact={compactMode}
+            total={metrics.market}
+            invested={metrics.invested}
+            pnl={metrics.pnl}
+            returnPct={metrics.returnPct}
+          />
+        )}
+
+        {/* 2. Secondary Insights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
             <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
@@ -338,10 +275,13 @@ export default function Dashboard({ auth }) {
               <button
                 type="button"
                 onClick={() => {
-                  const el = document.querySelector('#add-asset-section');
-                  if (el && typeof el.scrollIntoView === 'function') {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
+                  setIsAddAssetOpen(true);
+                  setTimeout(() => {
+                    const el = document.querySelector('#add-asset-section');
+                    if (el && typeof el.scrollIntoView === 'function') {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }, 50);
                 }}
                 className="px-3 py-1.5 rounded-md text-xs font-medium bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500"
               >
@@ -354,63 +294,61 @@ export default function Dashboard({ auth }) {
               >
                 Refresh Data
               </button>
-              <button
-                type="button"
-                onClick={() => setShowBrokerModal(true)}
-                className="px-3 py-1.5 rounded-md text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                Link Broker
-              </button>
+              {!token && (
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage?.('settings')}
+                  className="px-3 py-1.5 rounded-md text-xs font-medium bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500 shadow-sm"
+                >
+                  Login / Register
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Onboarding empty state when no assets */}
-        {!loading && !error && (!metrics || !metrics.items?.length) && (
-          <div className="bg-white dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
-                Welcome to FinVault
-              </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                Get started by adding your first asset. We&apos;ll calculate your portfolio value, P&amp;L, and allocation automatically.
-              </p>
-              <ul className="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1">
-                <li>Track stocks, mutual funds, and crypto in one place</li>
-                <li>See real-time gains and losses</li>
-                <li>Visualize your diversification and performance</li>
-              </ul>
+        {/* 3. Visuals & Discovery: Performance (2/3) + Watchlist & News (1/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6">
+              <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-6">Portfolio Performance</h2>
+              {token ? (
+                <PerformanceChart token={token} />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Sign in to unlock historical performance tracking.</p>
+                </div>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                const el = document.querySelector('#add-asset-section');
-                if (el && typeof el.scrollIntoView === 'function') {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }}
-              className="px-5 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white font-medium text-sm whitespace-nowrap"
-            >
-              Add your first asset
-            </button>
           </div>
-        )}
 
-        {/* Summary Cards */}
-        {loading ? <CardsSkeleton /> : metrics && (
-          <DashboardCards
-            compact={compactMode}
-            total={metrics.market}
-            invested={metrics.invested}
-            pnl={metrics.pnl}
-            returnPct={metrics.returnPct}
-          />
-        )}
+          <div className="space-y-6">
+            {/* Watchlist */}
+            {token ? (
+              <Watchlist token={token} />
+            ) : (
+              <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6">
+                <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-6">Watchlist</h2>
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Log in to track your favorite assets.</p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage?.('settings')}
+                    className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium transition"
+                  >
+                    Login / Register
+                  </button>
+                </div>
+              </div>
+            )}
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-          {/* Left Column */}
-          <div className="xl:col-span-2 space-y-6">
+            {/* Market News */}
+            <MarketNews />
+          </div>
+        </div>
+
+        {/* 4. Detailed Positions: Holdings & Add Asset */}
+        <div className="space-y-6">
             <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden min-w-0">
               <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
@@ -439,138 +377,24 @@ export default function Dashboard({ auth }) {
             </div>
 
             <div id="add-asset-section" className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 sm:p-6 min-w-0">
-              <div className="flex items-center gap-3 mb-6">
-                <PlusCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Add New Asset</h2>
-              </div>
-              <AssetForm token={token} onSaved={() => setRefreshTrigger(t => t + 1)} />
-            </div>
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="space-y-6">
-            {/* Linked Accounts */}
-            <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-blue-900 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 rounded-xl shadow-lg border border-slate-700/70 dark:border-slate-700 p-6 text-white flex flex-col justify-between h-full">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <Link className="w-6 h-6" />
-                  <h3 className="text-xl font-bold">Linked Accounts</h3>
-                </div>
-                <span className="text-sm opacity-90">
-                  {Object.values(connectedBrokers).filter(v => v).length} connected
-                </span>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span>Zerodha</span>
-                  <CheckCircle className="w-5 h-5 text-green-300" />
-                </div>
-                <div className="flex items-center justify-between opacity-70">
-                  <span>Upstox</span>
-                  <XCircle className="w-5 h-5" />
-                </div>
-                <div className="flex items-center justify-between opacity-70">
-                  <span>Alpaca</span>
-                  <XCircle className="w-5 h-5" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Interactive Brokers</span>
-                  <CheckCircle className="w-5 h-5 text-green-300" />
-                </div>
-              </div>
-              <button
-                type="button"
-                aria-label="Manage linked accounts"
-                onClick={() => setShowBrokerModal(true)}
-                className="w-full mt-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition"
+              <button 
+                type="button" 
+                onClick={() => setIsAddAssetOpen(!isAddAssetOpen)}
+                className="w-full flex items-center justify-between focus:outline-none group"
               >
-                Manage Connections
+                <div className="flex items-center gap-3">
+                  <PlusCircle className={`w-5 h-5 transition-colors ${isAddAssetOpen ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-600 dark:text-slate-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400'}`} />
+                  <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Add New Asset</h2>
+                </div>
+                {isAddAssetOpen ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
               </button>
-            </div>
-
-
-
-            {/* Top Movers */}
-            <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 h-full flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <TrendingUp className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                  <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Top Movers</h2>
+              {isAddAssetOpen && (
+                <div className="mt-6 animate-in slide-in-from-top-2 fade-in duration-300">
+                  <AssetForm token={token} onSaved={() => setRefreshTrigger(t => t + 1)} />
                 </div>
-                <div className="flex items-center justify-between mb-4">
-                <div className="text-sm text-slate-500">Click a mover to focus</div>
-                <div className="flex items-center gap-2">
-                  <button type="button" aria-pressed={moversAutoplay} onClick={() => setMoversAutoplay(p => !p)} className="px-3 py-1 rounded-md bg-white dark:bg-slate-800 border">
-                    {moversAutoplay ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-4 overflow-auto">
-                {topMovers.gainers.map(item => (
-                  <MoverItem key={item.symbol} item={item} isGain compact={compactMode} onSelect={(sym) => setSelectedSymbol(prev => prev === sym ? null : sym)} onHover={(h) => setHoveredSymbol(h)} />
-                ))}
-                {topMovers.losers.map(item => (
-                  <MoverItem key={item.symbol} item={item} compact={compactMode} onSelect={(sym) => setSelectedSymbol(prev => prev === sym ? null : sym)} onHover={(h) => setHoveredSymbol(h)} />
-                ))}
-              </div>
-              </div>
+              )}
             </div>
-
-            {/* Market News */}
-            <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 h-full flex flex-col justify-between">
-              <div className="flex items-center gap-3 mb-6">
-                <Newspaper className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Market News</h2>
-              </div>
-              <div className="overflow-auto">
-                <MarketNews />
-              </div>
-            </div>
-          </div>
         </div>
-
-        {/* Bottom Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6">
-            <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-6">Performance Over Time</h2>
-            {token && <PerformanceChart token={token} />}
-          </div>
-          <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6">
-            <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-6">Watchlist</h2>
-            {token && <Watchlist token={token} />}
-          </div>
-        </div>
-      </div>
-
-      {showBrokerModal && <BrokerModal />}
-    </div>
-  );
-}
-
-function MoverItem({ item, isGain = false, compact = false, onSelect, onHover }) {
-  const change = item.change_pct_1d || 0;
-  const positive = isGain || change >= 0;
-  const paddingClass = compact ? 'py-2 px-3' : 'py-3 px-4';
-  const symbolClass = compact ? 'font-medium text-sm' : 'font-semibold';
-  const iconSize = compact ? 'w-4 h-4' : 'w-5 h-5';
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelect?.(item.symbol)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect?.(item.symbol); } }}
-      onMouseEnter={() => onHover?.(item.symbol)}
-      onMouseLeave={() => onHover?.(null)}
-      className={`${paddingClass} bg-slate-50 dark:bg-slate-800/50 rounded-lg flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-500 transition-colors duration-200 hover:bg-slate-100 dark:hover:bg-slate-800`}
-    >
-      <div>
-        <p className={`${symbolClass} text-slate-800 dark:text-white`}>{item.symbol}</p>
-        {!compact && <p className="text-xs text-slate-500 dark:text-slate-400">{item.name || 'Asset'}</p>}
-      </div>
-      <div className={`flex items-center gap-2 font-semibold ${positive ? 'text-emerald-700 dark:text-emerald-500' : 'text-red-700 dark:text-red-500'}`}>
-        {positive ? <ArrowUpRight className={iconSize} /> : <ArrowDownRight className={iconSize} />}
-        <span>{Math.abs(change).toFixed(2)}%</span>
       </div>
     </div>
   );

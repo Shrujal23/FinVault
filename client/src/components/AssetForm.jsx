@@ -118,12 +118,12 @@ export default function AssetForm({ token, onSaved, editing }) {
     <div className="w-full max-w-6xl mx-auto">
       <div className="bg-white/90 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-700 dark:to-teal-700 px-8 py-6">
+        <div className="bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-700 dark:to-blue-700 px-8 py-6">
           <h2 className="text-3xl font-bold text-white flex items-center gap-4">
             {assetTypeIcons[type] || <PlusCircle className="w-8 h-8" />}
             {editing ? 'Edit Asset' : 'Add New Asset'}
           </h2>
-          <p className="text-emerald-100 mt-2 text-lg">Enter details to track your investment</p>
+          <p className="text-cyan-100 mt-2 text-lg">Enter details to track your investment</p>
         </div>
 
         {/* Form */}
@@ -139,7 +139,7 @@ export default function AssetForm({ token, onSaved, editing }) {
                 value={type}
                 onChange={(e) => setType(e.target.value)}
                 className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-2 focus:ring-slate-500/30 focus:border-slate-500 transition-all duration-200 font-medium"
+                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 font-medium"
               >
                 <option value="stock">📈 Stock</option>
                 <option value="mutual">🏦 Mutual Fund</option>
@@ -179,7 +179,7 @@ export default function AssetForm({ token, onSaved, editing }) {
                   value={symbol}
                   onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                   className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                           focus:ring-2 focus:ring-slate-500/30 focus:border-slate-500 transition-all duration-200 uppercase font-mono text-lg tracking-wider"
+                           focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 uppercase font-mono text-lg tracking-wider"
                   placeholder="e.g. BTC, HDFC MF"
                   required
                 />
@@ -197,7 +197,7 @@ export default function AssetForm({ token, onSaved, editing }) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-2 focus:ring-slate-500/30 focus:border-slate-500 transition-all duration-200"
+                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200"
                 placeholder="e.g. Reliance Industries Limited, Bitcoin"
                 required
               />
@@ -213,8 +213,8 @@ export default function AssetForm({ token, onSaved, editing }) {
                 type="text"
                 value={formatNumber(quantity)}
                 onChange={(e) => setQuantity(formatNumber(e.target.value))}
-                className="w-full px-5 py-4 rounded-2xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-4 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all font-mono"
+                className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
+                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 font-mono"
                 placeholder="1,000"
                 required
               />
@@ -233,7 +233,7 @@ export default function AssetForm({ token, onSaved, editing }) {
                   value={formatNumber(avgBuyPrice)}
                   onChange={(e) => setAvgBuyPrice(formatNumber(e.target.value))}
                   className="w-full pl-12 pr-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                           focus:ring-2 focus:ring-slate-500/30 focus:border-slate-500 transition-all duration-200 font-mono"
+                           focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 font-mono"
                   placeholder="2,450.75"
                   required
                 />
@@ -250,8 +250,8 @@ export default function AssetForm({ token, onSaved, editing }) {
                 type="text"
                 value={sector}
                 onChange={(e) => setSector(e.target.value)}
-                className="w-full px-5 py-4 rounded-2xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-4 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all capitalize"
+                className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
+                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 capitalize"
                 placeholder="e.g. Technology, Banking"
               />
             </div>
@@ -267,7 +267,7 @@ export default function AssetForm({ token, onSaved, editing }) {
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-2 focus:ring-slate-500/30 focus:border-slate-500 transition-all duration-200"
+                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200"
                 placeholder="growth, dividend, long-term"
               />
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Separate with commas</p>
@@ -278,9 +278,9 @@ export default function AssetForm({ token, onSaved, editing }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full sm:w-auto px-8 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white font-semibold
+                className="w-full sm:w-auto px-8 py-3 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500 font-semibold
                          shadow-sm disabled:opacity-70 disabled:cursor-not-allowed
-                         flex items-center justify-center gap-3 transition-colors"
+                         flex items-center justify-center gap-3 transition-all"
               >
                 {loading ? (
                   <>
