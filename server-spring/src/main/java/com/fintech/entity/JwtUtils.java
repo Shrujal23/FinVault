@@ -1,10 +1,8 @@
 package com.fintech.entity;
 
-import com.fintech.repository.UserRepository;
 import com.fintech.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -22,9 +20,6 @@ public class JwtUtils {
     @Value("${jwt.expiration}")
     private String jwtExpiresIn; // e.g., "7d"
 
-    @Autowired
-    private UserRepository userRepository;
-
     private SecretKey getSigningKey() {
         byte[] decodedKey = Base64.getDecoder().decode(jwtSecret);
         return Keys.hmacShaKeyFor(decodedKey);
@@ -38,6 +33,9 @@ public class JwtUtils {
 
         return Jwts.builder()
                 .setSubject(String.valueOf(user.getId()))
+                .claim("email", user.getEmail())
+                .claim("name", user.getName())
+                .claim("avatarUrl", user.getAvatarUrl())
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
@@ -58,13 +56,21 @@ public class JwtUtils {
 
             Long userId = Long.parseLong(claims.getSubject());
 
-            // DEBUG: log token info
-            System.out.println("[DEBUG] Token subject/userId: " + userId);
+            // Reconstruct a stateless User object without hitting the database!
+            User user = new User();
+            user.setId(userId);
+            
+            if (claims.get("email") != null) {
+                user.setEmail(claims.get("email", String.class));
+            }
+            if (claims.get("name") != null) {
+                user.setName(claims.get("name", String.class));
+            }
+            if (claims.get("avatarUrl") != null) {
+                user.setAvatarUrl(claims.get("avatarUrl", String.class));
+            }
 
-            Optional<User> userOpt = userRepository.findById(userId);
-            System.out.println("[DEBUG] User from DB: " + userOpt.map(User::getEmail).orElse("NOT FOUND"));
-
-            return userOpt;
+            return Optional.of(user);
 
         } catch (Exception e) {
             System.err.println("[DEBUG] Failed to parse token: " + e.getMessage());

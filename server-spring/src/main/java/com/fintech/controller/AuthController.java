@@ -3,6 +3,8 @@ package com.fintech.controller;
 import com.fintech.entity.JwtUtils;
 import com.fintech.entity.User;
 import com.fintech.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -10,12 +12,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "http://localhost:5173") 
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private UserService userService;
@@ -25,6 +28,17 @@ public class AuthController {
 
     @Value("${auth.return-reset-token:false}")
     private boolean returnResetToken;
+
+    // Helper to safely build the user response to avoid NullPointerExceptions 
+    // if the user hasn't set their name yet!
+    private Map<String, Object> buildUserPayload(User user) {
+        Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("id", user.getId());
+        payload.put("email", user.getEmail());
+        if (user.getName() != null) payload.put("name", user.getName());
+        if (user.getAvatarUrl() != null) payload.put("avatarUrl", user.getAvatarUrl());
+        return payload;
+    }
 
     // ---------------- Register ----------------
     @PostMapping("/register")
@@ -41,15 +55,15 @@ public class AuthController {
             User user = userService.registerUser(email, password);
             String token = jwtUtils.generateToken(user);
 
-            System.out.println("[AuthController.register] User registered: " + email + ", Token issued");
+            logger.info("User registered: {}, Token issued", email);
 
             return ResponseEntity.ok(Map.of(
                     "message", "User registered successfully",
                     "token", token,
-                    "user", Map.of("id", user.getId(), "email", user.getEmail())
+                    "user", buildUserPayload(user)
             ));
         } catch (RuntimeException e) {
-            System.out.println("[AuthController.register] Error: " + e.getMessage());
+            logger.warn("Registration error for {}: {}", email, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -70,16 +84,16 @@ public class AuthController {
             User user = userOpt.get();
             String token = jwtUtils.generateToken(user);
 
-            System.out.println("[AuthController.login] User logged in: " + email + ", User ID: " + user.getId() + ", Token issued");
+            logger.info("User logged in: {}, User ID: {}, Token issued", email, user.getId());
 
             return ResponseEntity.ok(Map.of(
                     "message", "Login successful",
                     "token", token,
-                    "user", Map.of("id", user.getId(), "email", user.getEmail())
+                    "user", buildUserPayload(user)
             ));
         }
 
-        System.out.println("[AuthController.login] Failed login attempt for: " + email);
+        logger.warn("Failed login attempt for: {}", email);
         return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
     }
 
@@ -94,15 +108,15 @@ public class AuthController {
         Optional<String> tokenOpt = userService.generatePasswordResetToken(email);
         if (tokenOpt.isPresent()) {
             String resetToken = tokenOpt.get();
-            System.out.println("[AuthController.forgotPassword] Password reset requested for: " + email);
-            // In a real system, send an email with a link containing the token. For dev, log the link for manual testing.
-            System.out.println("[AuthController.forgotPassword] SIMULATING EMAIL: Reset link would be /reset-password/" + resetToken);
+            logger.info("Password reset requested for: {}", email);
+            // In a real system, it will send an email with a link containing the token. For dev, log the link for manual testing.
+            logger.info("SIMULATING EMAIL: Reset link would be /reset-password/{}", resetToken);
             if (returnResetToken) {
-                // Return token in response for local dev convenience
+                // Return token in response for local dev convenience only
                 return ResponseEntity.ok(Map.of("message", "If an account with that email exists, a password reset link has been sent.", "resetToken", resetToken));
             }
         } else {
-            System.out.println("[AuthController.forgotPassword] Password reset requested for non-existent email: " + email);
+            logger.info("Password reset requested for non-existent email: {}", email);
         }
 
         return ResponseEntity.ok(Map.of("message", "If an account with that email exists, a password reset link has been sent."));
@@ -116,7 +130,7 @@ public class AuthController {
         }
 
         // Simulate SMS code flow — in production you'd lookup user by phone and send a code via SMS provider
-        System.out.println("[AuthController.forgotPasswordPhone] SIMULATING SMS: Reset code would be sent to phone: " + phone);
+        logger.info("SIMULATING SMS: Reset code would be sent to phone: {}", phone);
         return ResponseEntity.ok(Map.of("message", "If an account with that phone exists, a reset code has been sent."));
     }
 
@@ -133,10 +147,10 @@ public class AuthController {
         String newPassword = request.get("password");
 
         if (token == null || token.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Token is required"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Token is required!!!"));
         }
         if (newPassword == null || newPassword.isBlank() || newPassword.length() < 6) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Password must be at least 6 characters"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Password must be at least 6 characters try again"));
         }
 
         boolean ok = userService.resetPasswordWithToken(token, newPassword);

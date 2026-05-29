@@ -34,6 +34,12 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "avatar_url", columnDefinition = "LONGTEXT")
+    private String avatarUrl;
+
     @Column(
             nullable = false,
             updatable = false,
@@ -90,6 +96,20 @@ public class User {
     }
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public String getName() {
+        return name;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public LocalDateTime getCreatedAt() {
