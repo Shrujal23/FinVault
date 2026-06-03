@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -36,6 +37,19 @@ public class AssetService {
 
     private final String URL = alphavantageBaseUrl + "?function=GLOBAL_QUOTE&symbol=%s&apikey=%s";
 
+    private final RestTemplate restTemplate;
+
+    @Autowired
+    public AssetService(RestTemplateBuilder builder) {
+        this.restTemplate = builder
+            .interceptors((request, body, execution) -> {
+                request.getHeaders().set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                request.getHeaders().set("Accept", "application/json");
+                return execution.execute(request, body);
+            })
+            .build();
+    }
+
     // ----------------------- CRUD ------------------------
 
     public List<Asset> getAssetsByUser(User user) {
@@ -57,16 +71,7 @@ public class AssetService {
     // ---------------------- STOCK PRICE FETCH ----------------------
 
     public BigDecimal getLivePrice(String symbol) {
-        // Try simple
         BigDecimal price = fetchPrice(symbol);
-        if (price != null) return price;
-
-        // Try BSE
-        price = fetchPrice(symbol + ".BSE");
-        if (price != null) return price;
-
-        // Try NSE
-        price = fetchPrice(symbol + ".NS");
         if (price != null) return price;
 
         // Fallback to static prices if API fails
@@ -78,26 +83,72 @@ public class AssetService {
         Map<String, BigDecimal> map = new HashMap<>();
         if (symbols == null || symbols.isEmpty()) return map;
 
+        // 1. Bulk Fetch from Yahoo to prevent rate limits
+        try {
+            String joined = String.join(",", symbols);
+            String url = yahooQuoteBaseUrl + "/v7/finance/quote?symbols=" + java.net.URLEncoder.encode(joined, java.nio.charset.StandardCharsets.UTF_8);
+            String resp = restTemplate.getForObject(url, String.class);
+            if (resp != null && !resp.isEmpty()) {
+                JSONObject root = new JSONObject(resp);
+                if (root.has("quoteResponse")) {
+                    JSONArray res = root.getJSONObject("quoteResponse").optJSONArray("result");
+                    if (res != null) {
+                        for (int i = 0; i < res.length(); i++) {
+                            JSONObject quote = res.getJSONObject(i);
+                            if (quote.has("symbol") && quote.has("regularMarketPrice")) {
+                                map.put(quote.getString("symbol").toUpperCase(), new BigDecimal(quote.getDouble("regularMarketPrice")));
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 2. Fallback for any missed symbols (e.g., requires .NS suffix or AlphaVantage)
         for (String s : symbols) {
-            try {
-                BigDecimal p = getLivePrice(s);
-                if (p != null) map.put(s.toUpperCase(), p);
-            } catch (Exception e) {
-                // ignore per-symbol failures
+            if (!map.containsKey(s.toUpperCase())) {
+                try {
+                    BigDecimal p = getLivePrice(s);
+                    if (p != null) map.put(s.toUpperCase(), p);
+                } catch (Exception ignored) {}
             }
         }
         return map;
     }
 
-    // Resolve symbol details using Yahoo Search/Quote (best-effort)
+    // ---------------------- CRYPTO PRICE FETCH ----------------------
+    public Map<String, BigDecimal> getCryptoPrices(List<String> cryptoIds) {
+        Map<String, BigDecimal> map = new HashMap<>();
+        if (cryptoIds == null || cryptoIds.isEmpty()) return map;
+
+        try {
+            String ids = String.join(",", cryptoIds).toLowerCase();
+            String url = "https://api.coingecko.com/api/v3/simple/price?ids=" + ids + "&vs_currencies=inr";
+            String response = restTemplate.getForObject(url, String.class);
+            if (response != null && !response.isEmpty()) {
+                JSONObject root = new JSONObject(response);
+                for (String id : root.keySet()) {
+                    map.put(id.toUpperCase(), new BigDecimal(root.getJSONObject(id).getDouble("inr")));
+                }
+            }
+        } catch (Exception ignored) {}
+
+        for (String id : cryptoIds) {
+            if (!map.containsKey(id.toUpperCase())) {
+                BigDecimal fallback = getFallbackPrice(id);
+                if (fallback != null) map.put(id.toUpperCase(), fallback);
+            }
+        }
+        return map;
+    }
+    // Resolving symbol details using Yahoo Search/Quote 
     public Map<String, Object> resolveSymbolDetails(String symbol) {
         Map<String, Object> info = new HashMap<>();
         if (symbol == null || symbol.isBlank()) return info;
 
         try {
             String url = "https://query2.finance.yahoo.com/v1/finance/search?q=" + java.net.URLEncoder.encode(symbol, java.nio.charset.StandardCharsets.UTF_8);
-            RestTemplate rt = new RestTemplate();
-            String resp = rt.getForObject(url, String.class);
+            String resp = restTemplate.getForObject(url, String.class);
             if (resp != null && !resp.isEmpty()) {
                 org.json.JSONObject root = new org.json.JSONObject(resp);
                 if (root.has("quotes")) {
@@ -112,10 +163,10 @@ public class AssetService {
                 }
             }
 
-            // Try to also get price via quote endpoint
+            // Trying to also get price via quote endpoint
             try {
                 String qUrl = yahooQuoteBaseUrl + "/v7/finance/quote?symbols=" + java.net.URLEncoder.encode(symbol, java.nio.charset.StandardCharsets.UTF_8);
-                String qResp = rt.getForObject(qUrl, String.class);
+                String qResp = restTemplate.getForObject(qUrl, String.class);
                 if (qResp != null && !qResp.isEmpty()) {
                     org.json.JSONObject rroot = new org.json.JSONObject(qResp);
                     if (rroot.has("quoteResponse")) {
@@ -129,18 +180,17 @@ public class AssetService {
             } catch (Exception ignored) {}
 
         } catch (Exception e) {
-            // Best-effort; ignore failures
+            
         }
 
         return info;
     }
 
     private BigDecimal fetchPrice(String sym) {
-        // Try Yahoo Quote API first (free endpoint)
+        // Try Yahoo Quote API first 
         try {
             String yUrl = yahooQuoteBaseUrl + "/v7/finance/quote?symbols=" + java.net.URLEncoder.encode(sym, java.nio.charset.StandardCharsets.UTF_8);
-            RestTemplate rt = new RestTemplate();
-            String resp = rt.getForObject(yUrl, String.class);
+            String resp = restTemplate.getForObject(yUrl, String.class);
             if (resp != null && !resp.isEmpty()) {
                 org.json.JSONObject root = new org.json.JSONObject(resp);
                 if (root.has("quoteResponse")) {
@@ -153,15 +203,29 @@ public class AssetService {
                     }
                 }
             }
-        } catch (Exception e) {
-            // continue to other providers
-        }
+        } catch (Exception ignored) {}
 
-        // Fallback: AlphaVantage (existing behavior)
+        // Try Yahoo Chart API 
+        try {
+            String yChartUrl = yahooQuoteBaseUrl + "/v8/finance/chart/" + java.net.URLEncoder.encode(sym, java.nio.charset.StandardCharsets.UTF_8);
+            String resp = restTemplate.getForObject(yChartUrl, String.class);
+            if (resp != null && !resp.isEmpty()) {
+                org.json.JSONObject root = new org.json.JSONObject(resp);
+                if (root.has("chart")) {
+                    org.json.JSONArray res = root.getJSONObject("chart").optJSONArray("result");
+                    if (res != null && res.length() > 0) {
+                        org.json.JSONObject meta = res.getJSONObject(0).optJSONObject("meta");
+                        if (meta != null && meta.has("regularMarketPrice")) {
+                            return new BigDecimal(meta.getDouble("regularMarketPrice"));
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // Fallback: AlphaVantage
         try {
             String finalUrl = String.format(URL, sym, alphavantageApiKey);
-            RestTemplate restTemplate = new RestTemplate();
-
             String json = restTemplate.getForObject(finalUrl, String.class);
             if (json == null || json.isEmpty()) return null;
 
@@ -182,55 +246,66 @@ public class AssetService {
 
     // Fallback prices for stocks and cryptos if API fails
     private BigDecimal getFallbackPrice(String symbol) {
-        // Stock prices (NSE/BSE)
-        switch (symbol.toUpperCase()) {
-            case "TCS": return new BigDecimal("3850.0");
-            case "INFY": return new BigDecimal("1950.0");
-            case "WIPRO": return new BigDecimal("425.0");
-            case "RELIANCE": return new BigDecimal("2900.0");
-            case "HDFC": return new BigDecimal("2750.0");
-            case "ICICIBANK": return new BigDecimal("1100.0");
-            case "AXISBANK": return new BigDecimal("1150.0");
-            case "MARUTI": return new BigDecimal("12500.0");
-            case "BAJAJFINSV": return new BigDecimal("1600.0");
-            case "HDFCBANK": return new BigDecimal("1500.0");
-            case "SBIN": return new BigDecimal("830.0");
-            case "BHARTIARTL": return new BigDecimal("1350.0");
-            case "JSWSTEEL": return new BigDecimal("915.0");
-            case "LT": return new BigDecimal("3600.0");
-            case "KOTAKBANK": return new BigDecimal("1700.0");
-            case "ULTRACEMCO": return new BigDecimal("10800.0");
-            case "SUNPHARMA": return new BigDecimal("1600.0");
-            case "ASIANPAINT": return new BigDecimal("2900.0");
-            case "DMART": return new BigDecimal("4700.0");
-            case "HEROMOTOCO": return new BigDecimal("5500.0");
-            case "HINDALCO": return new BigDecimal("670.0");
-            case "TATASTEEL": return new BigDecimal("175.0");
-            case "ADANIPORTS": return new BigDecimal("1400.0");
-            case "ADANIGREEN": return new BigDecimal("1800.0");
-            case "INDIGO": return new BigDecimal("4300.0");
-            case "ONGC": return new BigDecimal("270.0");
-            case "POWERGRID": return new BigDecimal("320.0");
-            case "NTPC": return new BigDecimal("360.0");
-            case "EICHERMOT": return new BigDecimal("4700.0");
-            case "MARICO": return new BigDecimal("610.0");
-            case "BRITANNIA": return new BigDecimal("5300.0");
-            case "NESTLEIND": return new BigDecimal("2500.0");
-            case "TITAN": return new BigDecimal("3250.0");
-            case "GRASIM": return new BigDecimal("2400.0");
-            case "SIEMENS": return new BigDecimal("7400.0");
-            case "BEL": return new BigDecimal("300.0");
-            case "BDL": return new BigDecimal("1500.0");
-            case "GODREJCP": return new BigDecimal("1370.0");
-            case "BAJAJ-AUTO": return new BigDecimal("9200.0");
-            case "INDIANBANK": return new BigDecimal("540.0");
-            case "KPITTECH": return new BigDecimal("1500.0");
-            case "DIXON": return new BigDecimal("9500.0");
-            case "PAGEIND": return new BigDecimal("35000.0");
+        String cleanSymbol = symbol.toUpperCase();
+
+        // Explicit mappings with suffixes to properly distinguish Indian vs US stocks
+        switch (cleanSymbol) {
+            case "TCS.NS": return new BigDecimal("3850.0");
+            case "INFY.NS": return new BigDecimal("1950.0");
+            case "WIPRO.NS": return new BigDecimal("425.0");
+            case "RELIANCE.NS": return new BigDecimal("2900.0");
+            case "HDFCBANK.NS": return new BigDecimal("1500.0");
+            case "ICICIBANK.NS": return new BigDecimal("1100.0");
+            case "AXISBANK.NS": return new BigDecimal("1150.0");
+            case "MARUTI.NS": return new BigDecimal("12500.0");
+            case "BAJAJFINSV.NS": return new BigDecimal("1600.0");
+            case "SBIN.NS": return new BigDecimal("830.0");
+            case "BHARTIARTL.NS": return new BigDecimal("1350.0");
+            case "JSWSTEEL.NS": return new BigDecimal("915.0");
+            case "LT.NS": return new BigDecimal("3600.0");
+            case "KOTAKBANK.NS": return new BigDecimal("1700.0");
+            case "ULTRACEMCO.NS": return new BigDecimal("10800.0");
+            case "SUNPHARMA.NS": return new BigDecimal("1600.0");
+            case "ASIANPAINT.NS": return new BigDecimal("2900.0");
+            case "DMART.NS": return new BigDecimal("4700.0");
+            case "HEROMOTOCO.NS": return new BigDecimal("5500.0");
+            case "HINDALCO.NS": return new BigDecimal("670.0");
+            case "TATASTEEL.NS": return new BigDecimal("175.0");
+            case "ADANIPORTS.NS": return new BigDecimal("1400.0");
+            case "ADANIGREEN.NS": return new BigDecimal("1800.0");
+            case "INDIGO.NS": return new BigDecimal("4300.0");
+            case "ONGC.NS": return new BigDecimal("270.0");
+            case "POWERGRID.NS": return new BigDecimal("320.0");
+            case "NTPC.NS": return new BigDecimal("360.0");
+            case "EICHERMOT.NS": return new BigDecimal("4700.0");
+            case "MARICO.NS": return new BigDecimal("610.0");
+            case "BRITANNIA.NS": return new BigDecimal("5300.0");
+            case "NESTLEIND.NS": return new BigDecimal("2500.0");
+            case "TITAN.NS": return new BigDecimal("3250.0");
+            case "GRASIM.NS": return new BigDecimal("2400.0");
+            case "SIEMENS.NS": return new BigDecimal("7400.0");
+            case "BEL.NS": return new BigDecimal("300.0");
+            case "BDL.NS": return new BigDecimal("1500.0");
+            case "GODREJCP.NS": return new BigDecimal("1370.0");
+            case "BAJAJ-AUTO.NS": return new BigDecimal("9200.0");
+            case "INDIANBANK.NS": return new BigDecimal("540.0");
+            case "KPITTECH.NS": return new BigDecimal("1500.0");
+            case "DIXON.NS": return new BigDecimal("9500.0");
+            case "PAGEIND.NS": return new BigDecimal("35000.0");
+            case "ITC.NS": return new BigDecimal("450.0");
+            
+            // US Stocks
+            case "AAPL": return new BigDecimal("175.0");
+            case "MSFT": return new BigDecimal("330.0");
+            case "GOOGL": return new BigDecimal("135.0");
+            case "AMZN": return new BigDecimal("130.0");
+            case "TSLA": return new BigDecimal("240.0");
+            case "NSC": return new BigDecimal("250.0"); // Added NSC to fallback just in case!
+            case "RS": return new BigDecimal("280.0"); // Added RS (Reliance Steel) fallback
         }
 
         // Crypto prices
-        switch (symbol.toLowerCase()) {
+        switch (cleanSymbol.toLowerCase()) {
             case "bitcoin": return new BigDecimal("5800000.0");
             case "ethereum": return new BigDecimal("310000.0");
             case "tether": return new BigDecimal("83.5");
@@ -282,6 +357,6 @@ public class AssetService {
             case "enjincoin": return new BigDecimal("28.0");
         }
 
-        return null; // No fallback price found
+        return null;
     }
 }

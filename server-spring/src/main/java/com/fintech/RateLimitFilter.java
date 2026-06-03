@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -35,7 +36,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private boolean trustXForwardedFor;
 
     private final ConcurrentHashMap<String, WindowCounter> windows = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Object> locks = new ConcurrentHashMap<>();
 
     private static final class WindowCounter {
         long windowStartMillis;
@@ -89,16 +89,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private boolean allow(String bucketKey, int maxPerWindow) {
-        Object lock = locks.computeIfAbsent(bucketKey, k -> new Object());
-        synchronized (lock) {
-            long now = System.currentTimeMillis();
-            WindowCounter w = windows.computeIfAbsent(bucketKey, k -> {
-                WindowCounter c = new WindowCounter();
-                c.windowStartMillis = now;
-                c.count = 0;
-                return c;
-            });
+        long now = System.currentTimeMillis();
+        
+        WindowCounter w = windows.computeIfAbsent(bucketKey, k -> {
+            WindowCounter c = new WindowCounter();
+            c.windowStartMillis = now;
+            c.count = 0;
+            return c;
+        });
 
+        // We can synchronize directly on the counter object, eliminating the need for a separate locks map
+        synchronized (w) {
             if (now - w.windowStartMillis >= WINDOW_MS) {
                 w.windowStartMillis = now;
                 w.count = 0;
@@ -110,5 +111,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
             w.count++;
             return true;
         }
+    }
+
+    // Runs every 2 minutes to clear out inactive IPs and prevent memory leaks
+    @Scheduled(fixedRate = 120_000)
+    public void cleanupExpiredWindows() {
+        long now = System.currentTimeMillis();
+        windows.entrySet().removeIf(entry -> now - entry.getValue().windowStartMillis > WINDOW_MS);
     }
 }

@@ -147,10 +147,10 @@ public class AuthController {
         String newPassword = request.get("password");
 
         if (token == null || token.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Token is required!!!"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Token is required"));
         }
         if (newPassword == null || newPassword.isBlank() || newPassword.length() < 6) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Password must be at least 6 characters try again"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Password must be at least 6 characters long"));
         }
 
         boolean ok = userService.resetPasswordWithToken(token, newPassword);

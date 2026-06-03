@@ -3,7 +3,7 @@ package com.fintech.service;
 import com.fintech.entity.User;
 import com.fintech.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -13,12 +13,12 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.passwordEncoder = new BCryptPasswordEncoder();
+        this.passwordEncoder = passwordEncoder;
     }
 
     // ---------------------- Register User ----------------------
@@ -44,10 +44,7 @@ public class UserService {
 
     // ---------------------- Validate Password ----------------------
     public boolean validatePassword(String rawPassword, String storedHash) {
-        // Primary: bcrypt hash match
-        if (passwordEncoder.matches(rawPassword, storedHash)) return true;
-        // Dev fallback: if legacy data stored plain text, allow direct match
-        return rawPassword.equals(storedHash);
+        return passwordEncoder.matches(rawPassword, storedHash);
     }
 
     // ---------------------- Password Reset ----------------------
@@ -85,4 +82,3 @@ public class UserService {
         return true;
     }
 }
-

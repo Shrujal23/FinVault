@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { apiRequest } from '../api/client.js';
 import AssetForm from '../components/AssetForm.jsx';
 import CombinedAssetPanel from '../components/CombinedAssetPanel.jsx';
@@ -29,6 +29,7 @@ export default function Dashboard({ auth, setCurrentPage }) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
+  const addAssetRef = useRef(null);
 
   // Compact mode for denser dashboard layout (persisted)
   const [compactMode, setCompactMode] = useState(() => localStorage.getItem('dashboard.compact') === 'true');
@@ -103,6 +104,13 @@ export default function Dashboard({ auth, setCurrentPage }) {
   const [selectedSymbol, setSelectedSymbol] = useState(null);
   const [hoveredSymbol, setHoveredSymbol] = useState(null);
 
+  const handleAddAssetClick = () => {
+    setIsAddAssetOpen(true);
+    setTimeout(() => {
+      addAssetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-blue-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 pb-12">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
@@ -125,15 +133,7 @@ export default function Dashboard({ auth, setCurrentPage }) {
             {token && (
               <button
                 type="button"
-                onClick={() => {
-                  setIsAddAssetOpen(true);
-                  setTimeout(() => {
-                    const el = document.querySelector('#add-asset-section');
-                    if (el && typeof el.scrollIntoView === 'function') {
-                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                  }, 50);
-                }}
+                onClick={handleAddAssetClick}
                 className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg shadow-sm font-medium transition-all"
               >
                 <PlusCircle className="w-5 h-5" />
@@ -215,15 +215,7 @@ export default function Dashboard({ auth, setCurrentPage }) {
             </div>
             <button
               type="button"
-              onClick={() => {
-                setIsAddAssetOpen(true);
-                setTimeout(() => {
-                  const el = document.querySelector('#add-asset-section');
-                  if (el && typeof el.scrollIntoView === 'function') {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                }, 50);
-              }}
+              onClick={handleAddAssetClick}
               className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500 shadow-sm font-medium text-sm whitespace-nowrap transition-all"
             >
               Add your first asset
@@ -274,15 +266,7 @@ export default function Dashboard({ auth, setCurrentPage }) {
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setIsAddAssetOpen(true);
-                  setTimeout(() => {
-                    const el = document.querySelector('#add-asset-section');
-                    if (el && typeof el.scrollIntoView === 'function') {
-                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                  }, 50);
-                }}
+                onClick={handleAddAssetClick}
                 className="px-3 py-1.5 rounded-md text-xs font-medium bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500"
               >
                 Add Asset
@@ -376,7 +360,7 @@ export default function Dashboard({ auth, setCurrentPage }) {
               </div>
             </div>
 
-            <div id="add-asset-section" className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 sm:p-6 min-w-0">
+            <div id="add-asset-section" ref={addAssetRef} className="bg-white/95 dark:bg-slate-900/95 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 sm:p-6 min-w-0">
               <button 
                 type="button" 
                 onClick={() => setIsAddAssetOpen(!isAddAssetOpen)}

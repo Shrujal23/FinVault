@@ -2,12 +2,16 @@ package com.fintech.dto;
 
 import com.fintech.entity.Asset;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class AssetDto {
+
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     private Long id;
     private Asset.AssetType type;
@@ -16,6 +20,7 @@ public class AssetDto {
     private BigDecimal quantity;
     private BigDecimal avgBuyPrice;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private String sector;
     private List<String> tags;
 
@@ -36,14 +41,15 @@ public class AssetDto {
         dto.setQuantity(asset.getQuantity());
         dto.setAvgBuyPrice(asset.getAvgBuyPrice());
         dto.setCreatedAt(asset.getCreatedAt());
+        dto.setUpdatedAt(asset.getUpdatedAt());
         dto.setSector(asset.getSector());
         dto.setUserId(asset.getUserId());
 
         // Parse tags from JSON string to List<String>
-        if (asset.getTags() != null && !asset.getTags().isEmpty()) {
+        if (asset.getTags() != null && !asset.getTags().isBlank() && !asset.getTags().equals("[]")) {
             try {
-                // Assuming tags are stored as JSON array string
-                dto.setTags(List.of(asset.getTags().replace("[", "").replace("]", "").replace("\"", "").split(",")));
+                List<String> parsedTags = mapper.readValue(asset.getTags(), new TypeReference<List<String>>() {});
+                dto.setTags(parsedTags);
             } catch (Exception e) {
                 dto.setTags(List.of());
             }
@@ -75,6 +81,9 @@ public class AssetDto {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public String getSector() { return sector; }
     public void setSector(String sector) { this.sector = sector; }

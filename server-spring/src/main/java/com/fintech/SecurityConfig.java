@@ -82,6 +82,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll() // Login/Register
                 .requestMatchers("/api/news/**").permitAll() // Public market news
+                .requestMatchers("/api/search/**").permitAll() // Public symbol search
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight
                 .anyRequest().authenticated() // Everything else requires JWT
             )

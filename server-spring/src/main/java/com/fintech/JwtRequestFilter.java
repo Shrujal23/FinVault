@@ -34,7 +34,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
 
-        // ✅ Missing header → block immediately
+        // Missing header → block immediately
         if (header == null || !header.startsWith("Bearer ")) {
             sendUnauthorized(response, "Missing Authorization header");
             return;
@@ -42,13 +42,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         String token = header.substring(7);
 
-        // ✅ Invalid or expired token → block immediately
+        // Invalid or expired token → block immediately
         if (!jwtUtils.validateToken(token)) {
             sendUnauthorized(response, "Invalid or expired token");
             return;
         }
 
-        // ✅ Extract user from token
+        // Extract user from token
         Optional<User> userOpt = jwtUtils.getUserFromToken(token);
         if (userOpt.isEmpty()) {
             sendUnauthorized(response, "User not found for token");
@@ -57,7 +57,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         User user = userOpt.get();
 
-        // ✅ Set authentication
+        // Set authentication
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(
                         user,
@@ -67,7 +67,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         SecurityContextHolder.getContext().setAuthentication(auth);
 
-        // ✅ Continue only after successful authentication
+        // Continue only after successful authentication
         filterChain.doFilter(request, response);
     }
 
@@ -81,8 +81,12 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
         String uri = request.getRequestURI();
         if (uri == null) return false;
+        
+        // Always allow CORS preflight requests to pass through
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
+        
         // public/permitAll endpoints
-        if (uri.startsWith("/api/auth") || uri.startsWith("/api/news")) return true;
+        if (uri.startsWith("/api/auth") || uri.startsWith("/api/news") || uri.startsWith("/api/search")) return true;
         // Also skip the default error path
         return uri.startsWith("/error");
     }

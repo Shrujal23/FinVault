@@ -38,7 +38,7 @@ public class DividendFetcher {
         this.assetRepository = assetRepository;
     }
 
-    // Run once daily at 02:30 UTC
+    
     @Scheduled(cron = "0 30 2 * * ?")
     public void scheduledFetch() {
         log.info("Starting scheduled dividend fetch");

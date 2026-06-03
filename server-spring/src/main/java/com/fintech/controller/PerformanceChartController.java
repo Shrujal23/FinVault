@@ -4,6 +4,8 @@ import com.fintech.entity.Asset;
 import com.fintech.entity.User;
 import com.fintech.service.AssetService;
 import com.fintech.entity.JwtUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +17,8 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/performance")
 public class PerformanceChartController {
+
+    private static final Logger logger = LoggerFactory.getLogger(PerformanceChartController.class);
 
     private static final double BASE_PORTFOLIO_VALUE = 100000.0;
     private static final double DAILY_VOLATILITY = 0.04;  // +/- 2%
@@ -31,32 +35,33 @@ public class PerformanceChartController {
 
     @GetMapping("/chart")
     public ResponseEntity<?> getPerformanceChart(@RequestHeader(value = "Authorization", required = false) String token) {
-        // Validate token
-        if (!isTokenValid(token)) {
-            return ResponseEntity.status(401).body(Map.of("error", "Authorization header missing"));
-        }
-
-        // Get user from token
-        Optional<User> userOpt = jwtUtils.getUserFromToken(token);
+        Optional<User> userOpt = validateTokenAndGetUser(token);
         if (userOpt.isEmpty()) {
+            logger.warn("Unauthorized access attempt to getPerformanceChart");
             return ResponseEntity.status(401).body(Map.of("error", "Invalid or missing token"));
         }
 
         try {
             User user = userOpt.get();
             List<Asset> assets = assetService.getAssetsByUser(user);
-            List<Map<String, Object>> chartData = generatePerformanceData(assets);
+            
+            // Pass userId to seed the generator so each user gets a unique, consistent chart
+            List<Map<String, Object>> chartData = generatePerformanceData(assets, user.getId());
             
             Map<String, Object> response = buildResponse(chartData);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
+            logger.error("Error generating performance chart: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
-    private boolean isTokenValid(String token) {
-        return token != null && !token.isBlank();
+    private Optional<User> validateTokenAndGetUser(String token) {
+        if (token == null || token.isBlank()) {
+            return Optional.empty();
+        }
+        return jwtUtils.getUserFromToken(token);
     }
 
     private Map<String, Object> buildResponse(List<Map<String, Object>> chartData) {
@@ -67,7 +72,7 @@ public class PerformanceChartController {
         return response;
     }
 
-    private List<Map<String, Object>> generatePerformanceData(List<Asset> assets) {
+    private List<Map<String, Object>> generatePerformanceData(List<Asset> assets, Long userId) {
         double initialValue = calculateInitialPortfolioValue(assets);
         List<Map<String, Object>> data = new ArrayList<>();
         
@@ -75,7 +80,7 @@ public class PerformanceChartController {
         LocalDate startDate = endDate.minusDays(PERFORMANCE_DAYS - 1);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT);
         
-        PerformanceCalculator calculator = new PerformanceCalculator(initialValue);
+        PerformanceCalculator calculator = new PerformanceCalculator(initialValue, RANDOM_SEED + userId);
         
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             calculator.updateValue();
@@ -112,14 +117,15 @@ public class PerformanceChartController {
     private class PerformanceCalculator {
         private final double initialValue;
         private double currentValue;
+        private final Random random;
 
-        public PerformanceCalculator(double initialValue) {
+        public PerformanceCalculator(double initialValue, long seed) {
             this.initialValue = initialValue;
             this.currentValue = initialValue;
+            this.random = new Random(seed);
         }
 
         public void updateValue() {
-            Random random = new Random(RANDOM_SEED);
             double changePercent = (random.nextDouble() - 0.5) * DAILY_VOLATILITY;
             currentValue = currentValue * (1 + changePercent);
             currentValue = currentValue * DAILY_GAIN;

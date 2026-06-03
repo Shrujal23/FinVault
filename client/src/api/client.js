@@ -28,6 +28,7 @@ export async function apiRequest(path, { method = 'GET', body, token: inputToken
 
         if (res.status === 401 || res.status === 403) {
             localStorage.removeItem('token');
+            window.location.href = '/login';
             throw new Error('Unauthorized/Forbidden: Token missing, invalid, or expired.');
         }
 

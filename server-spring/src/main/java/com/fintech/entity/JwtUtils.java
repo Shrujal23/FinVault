@@ -5,6 +5,8 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.SecretKey;
 import java.util.Base64;
@@ -14,11 +16,13 @@ import java.util.Optional;
 @Component
 public class JwtUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
+
     @Value("${jwt.secret}")
     private String jwtSecret;  // BASE64 encoded secret
 
     @Value("${jwt.expiration}")
-    private String jwtExpiresIn; // e.g., "7d"
+    private String jwtExpiresIn;  //"7d"
 
     private SecretKey getSigningKey() {
         byte[] decodedKey = Base64.getDecoder().decode(jwtSecret);
@@ -56,7 +60,7 @@ public class JwtUtils {
 
             Long userId = Long.parseLong(claims.getSubject());
 
-            // Reconstruct a stateless User object without hitting the database!
+            // Reconstructed a stateless User object without hitting the database!
             User user = new User();
             user.setId(userId);
             
@@ -73,7 +77,7 @@ public class JwtUtils {
             return Optional.of(user);
 
         } catch (Exception e) {
-            System.err.println("[DEBUG] Failed to parse token: " + e.getMessage());
+            logger.debug("Failed to parse token: {}", e.getMessage());
             return Optional.empty();
         }
     }
@@ -91,7 +95,7 @@ public class JwtUtils {
 
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            System.err.println("[DEBUG] Token validation failed: " + e.getMessage());
+            logger.debug("Token validation failed: {}", e.getMessage());
             return false;
         }
     }
