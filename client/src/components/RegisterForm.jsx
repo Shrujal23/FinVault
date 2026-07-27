@@ -1,47 +1,60 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { Mail, Lock, Eye, EyeOff, Check, X, AlertCircle, Shield, Loader2 } from 'lucide-react';
 import { apiRequest } from '../api/client.js';
 import StatusMessage from './StatusMessage.jsx';
+import { FcGoogle } from 'react-icons/fc';
+import { PASSWORD_STRENGTH_CONFIG, getPasswordChecks } from '../constants.js';
+
 
 const PasswordField = ({
     label,
+    name,
     value,
     onChange,
     showPassword,
     toggleShow,
     isConfirm = false,
     matchStatus = null,
-    focused,
-    onFocus,
-    onBlur,
     placeholder
-}) => (
-    <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-            <Lock className="w-4 h-4" />
-            {label}
+}) => {
+    const isInvalid = isConfirm && matchStatus === 'mismatch';
+    const isValid = isConfirm && matchStatus === 'match';
+
+    return (
+    <div className="space-y-2 group">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-400 group-focus-within:text-slate-800 dark:group-focus-within:text-slate-200 transition-colors duration-200 flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                {label}
         </label>
-        <div className={`relative transition-all duration-200 ${focused ? 'ring-2 ring-emerald-500 ring-offset-2' : ''} rounded-xl`}>
+            <div className="relative">
             <input
-                type={showPassword ? 'text' : 'password'}
-                value={value}
-                onChange={onChange}
-                onFocus={onFocus}
-                onBlur={onBlur}
-                required
+                    type={showPassword ? 'text' : 'password'}
+                    name={name}
+                    value={value}
+                    onChange={onChange}
+                    required
                 autoComplete={isConfirm ? "new-password" : "current-password"}
                 placeholder={placeholder}
-                className={`w-full px-4 py-3 pl-12 pr-12 rounded-xl border bg-slate-50 dark:bg-slate-800/50 
-                    focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-800 transition-all duration-200
-                    ${matchStatus === 'mismatch' ? 'border-red-400 focus:border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
+                    aria-invalid={isInvalid}
+                    className={`
+                        w-full px-4 py-3.5 pl-12 pr-12 rounded-2xl border bg-white dark:bg-slate-900
+                        placeholder-slate-400 dark:placeholder-slate-500
+                        transition-colors transition-shadow duration-200 focus:outline-none
+                        ${isInvalid
+                            ? 'border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
+                            : isValid
+                                ? 'border-emerald-500 dark:border-emerald-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                                : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20'
+                        }
+                    `}
             />
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-cyan-500 transition-colors duration-200" />
 
             {/* Match Indicator */}
             {isConfirm && value && (
                 <div className="absolute right-12 top-1/2 -translate-y-1/2 pointer-events-none">
                     {matchStatus === 'match' && <Check className="w-5 h-5 text-emerald-500" />}
-                    {matchStatus === 'mismatch' && <X className="w-5 h-5 text-red-500" />}
+                        {matchStatus === 'mismatch' && <AlertCircle className="w-5 h-5 text-red-500" />}
                 </div>
             )}
 
@@ -49,14 +62,15 @@ const PasswordField = ({
             <button
                 type="button"
                 onClick={toggleShow}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 z-10 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 z-10 transition-colors"
                 aria-label={showPassword ? "Hide password" : "Show password"}
             >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
         </div>
     </div>
-);
+    );
+};
 
 export default function RegisterForm({ auth }) {
     const [formData, setFormData] = useState({
@@ -68,9 +82,21 @@ export default function RegisterForm({ auth }) {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
-    const [focused, setFocused] = useState({ email: false, password: false, confirm: false });
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [modalContent, setModalContent] = useState(null); // 'terms' | 'privacy' | null
+
+    const handleChange = useCallback((e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }, []);
+
+    const toggleShowPassword = useCallback(() => {
+        setShowPassword(prev => !prev);
+    }, []);
+
+    const toggleShowConfirm = useCallback(() => {
+        setShowConfirm(prev => !prev);
+    }, []);
 
     // Password Strength
     const getPasswordStrength = useCallback((pwd) => {
@@ -83,30 +109,20 @@ export default function RegisterForm({ auth }) {
         if (/\d/.test(pwd)) score++;
         if (/[^a-zA-Z0-9]/.test(pwd)) score++;
 
-        const labels = ['Too short', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'];
-        const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-emerald-500', 'bg-emerald-600'];
+        const { labels, colors } = PASSWORD_STRENGTH_CONFIG;
 
         return {
-            score: Math.min(score, 5),
-            label: labels[Math.min(score, 5)],
-            color: colors[Math.min(score - 1, 4)] || 'bg-red-500'
+        score: Math.min(score, 5),
+        label: labels[Math.min(score, 5)],
+        color: colors[Math.min(score - 1, 4)] || 'bg-red-500'
         };
     }, []);
 
     const strength = getPasswordStrength(formData.password);
-    const passwordChecks = [
-        { id: 'length', label: 'At least 12 characters', met: formData.password.length >= 12 },
-        { id: 'uppercase', label: 'One uppercase letter', met: /[A-Z]/.test(formData.password) },
-        { id: 'lowercase', label: 'One lowercase letter', met: /[a-z]/.test(formData.password) },
-        { id: 'number', label: 'One number', met: /\d/.test(formData.password) },
-        { id: 'special', label: 'One special character', met: /[^A-Za-z0-9\s]/.test(formData.password) },
-        { id: 'spaces', label: 'No spaces', met: !/\s/.test(formData.password) },
-    ];
+    const passwordChecks = getPasswordChecks(formData.password);
     const passwordsMatch = formData.confirmPassword && 
-                          formData.password === formData.confirmPassword;
-    const matchStatus = formData.confirmPassword 
-        ? (passwordsMatch ? 'match' : 'mismatch') 
-        : null;
+    formData.password === formData.confirmPassword;
+    const matchStatus = formData.confirmPassword ? (passwordsMatch ? 'match' : 'mismatch') : null;
 
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const validatePasswordPolicy = (pwd) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{12,}$/.test(pwd);
@@ -116,20 +132,20 @@ export default function RegisterForm({ auth }) {
         setError('');
 
         if (!validateEmail(formData.email)) {
-            setError('Please enter a valid email address');
-            return;
+        setError('Please enter a valid email address');
+        return;
         }
         if (!validatePasswordPolicy(formData.password)) {
-            setError('Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character');
-            return;
+        setError('Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character');
+        return;
         }
         if (!passwordsMatch) {
-            setError('Passwords do not match');
-            return;
+        setError('Passwords do not match');
+        return;
         }
         if (!acceptedTerms) {
-            setError('You must accept the Terms & Conditions');
-            return;
+        setError('You must accept the Terms & Conditions');
+        return;
         }
 
         setLoading(true);
@@ -137,15 +153,15 @@ export default function RegisterForm({ auth }) {
             const data = await apiRequest('/api/auth/register', {
                 method: 'POST',
                 body: { 
-                    email: formData.email.trim().toLowerCase(), 
-                    password: formData.password 
+                email: formData.email.trim().toLowerCase(), 
+                password: formData.password 
                 },
             });
 
             auth.setToken(data.token, true);
             auth.setUser(data.user);
             
-            // Optional: You could trigger a success toast here
+            
         } catch (err) {
             setError(err.message || 'Failed to create account. This email may already be registered.');
         } finally {
@@ -154,39 +170,36 @@ export default function RegisterForm({ auth }) {
     }, [formData, passwordsMatch, acceptedTerms, auth]);
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-7">
             {/* Email Field */}
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <div className="space-y-2 group">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-400 group-focus-within:text-slate-800 dark:group-focus-within:text-slate-200 transition-colors duration-200 flex items-center gap-2">
                     <Mail className="w-4 h-4" />
                     Email Address
                 </label>
-                <div className={`relative transition-all duration-200 ${focused.email ? 'ring-2 ring-emerald-500 ring-offset-2' : ''} rounded-xl`}>
+                <div className="relative">
                     <input
                         type="email"
+                        name="email"
                         value={formData.email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        onFocus={() => setFocused(prev => ({ ...prev, email: true }))}
-                        onBlur={() => setFocused(prev => ({ ...prev, email: false }))}
+                        onChange={handleChange}
                         required
                         autoComplete="email"
                         placeholder="you@company.com"
-                        className="w-full px-4 py-3 pl-12 rounded-xl border bg-slate-50 dark:bg-slate-800/50 border-slate-300 dark:border-slate-700 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-800 transition-all"
+                        className="w-full px-4 py-3.5 pl-12 rounded-2xl border bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 hover:border-slate-400 dark:hover:border-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-colors transition-shadow duration-200"
                     />
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-cyan-500 transition-colors duration-200" />
                 </div>
             </div>
 
             {/* Password Field */}
             <PasswordField
                 label="Create Password"
+                name="password"
                 value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                onChange={handleChange}
                 showPassword={showPassword}
-                toggleShow={() => setShowPassword(!showPassword)}
-                focused={focused.password}
-                onFocus={() => setFocused(prev => ({ ...prev, password: true }))}
-                onBlur={() => setFocused(prev => ({ ...prev, password: false }))}
+                toggleShow={toggleShowPassword}
                 placeholder="Create a strong password"
             />
 
@@ -229,15 +242,13 @@ export default function RegisterForm({ auth }) {
             {/* Confirm Password */}
             <PasswordField
                 label="Confirm Password"
+                name="confirmPassword"
                 value={formData.confirmPassword}
-                onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                onChange={handleChange}
                 showPassword={showConfirm}
-                toggleShow={() => setShowConfirm(!showConfirm)}
+                toggleShow={toggleShowConfirm}
                 isConfirm={true}
                 matchStatus={matchStatus}
-                focused={focused.confirm}
-                onFocus={() => setFocused(prev => ({ ...prev, confirm: true }))}
-                onBlur={() => setFocused(prev => ({ ...prev, confirm: false }))}
                 placeholder="Repeat your password"
             />
 
@@ -272,7 +283,7 @@ export default function RegisterForm({ auth }) {
             <button
                 type="submit"
                 disabled={loading || !formData.email || !formData.password || !passwordsMatch || !acceptedTerms}
-                className="w-full py-3.5 rounded-xl text-white font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm transition-all duration-200 flex items-center justify-center gap-3"
+                className="w-full py-3.5 rounded-2xl text-white font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm transition-all duration-200 flex items-center justify-center gap-3"
             >
                 {loading ? (
                     <>
@@ -283,6 +294,25 @@ export default function RegisterForm({ auth }) {
                     'Create My FinVault Account'
                 )}
             </button>
+
+            {/* Divider */}
+<div className="flex items-center gap-4 my-4">
+    <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+    <span className="text-xs uppercase tracking-wider text-slate-500">
+        OR
+    </span>
+    <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+</div>
+
+{/* Google Sign In...disabled for now... */}
+<button
+  disabled
+  className="w-full flex items-center justify-center gap-3 rounded-xl border py-3 opacity-60 cursor-not-allowed"
+>
+  <FcGoogle className="w-5 h-5" />
+  Continue with Google
+  <span className="text-xs">(Coming Soon)</span>
+</button>
 
             {/* Simple Terms/Privacy Modal */}
             {modalContent && (

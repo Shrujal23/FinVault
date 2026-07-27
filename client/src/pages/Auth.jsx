@@ -6,29 +6,29 @@ import { BarChart3, LogIn, UserPlus, TrendingUp, Briefcase, PieChart } from 'luc
 
 export default function AuthPage({ auth }) {
     const [mode, setMode] = useState('login');
-
+    
     return (
         <div className="
             min-h-screen 
-            bg-gradient-to-br from-gray-50 to-gray-100 
-            dark:from-black dark:to-slate-950
+            bg-gradient-to-br from-slate-50 to-slate-100 
+            dark:from-slate-950 dark:to-black
             flex items-center justify-center 
-            p-4 px-6 
+            p-4 sm:p-6 
         ">
             <div className="w-full max-w-md">
 
                 {/* Branding */}
                 <div className="text-center mb-8">
                     <div className="flex items-center justify-center gap-3 mb-2">
-                        <BarChart3 className="w-8 h-8 text-slate-700 dark:text-slate-300" />
+                        <BarChart3 className="w-9 h-9 text-slate-700 dark:text-slate-300" />
                         <h1 className="
-                            text-4xl font-bold 
-                            text-slate-900 dark:text-white
+                            text-4xl sm:text-5xl font-bold 
+                            bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent
                         ">
                             FinVault
                         </h1>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-slate-600 dark:text-slate-400 mt-2">
                         {mode === 'login' && 'Welcome back. Enter your details below.'}
                         {mode === 'register' && 'Create an account and take control of your wealth.'}
                         {mode === 'forgot' && 'Happens to the best of us. Let’s get you back in.'}
@@ -37,25 +37,25 @@ export default function AuthPage({ auth }) {
 
                 {/* Card */}
                 <div className="
-                    bg-white dark:bg-slate-900
+                    bg-white dark:bg-slate-900/90
                     rounded-2xl shadow-xl 
-                    p-8 
-                    border border-gray-200 dark:border-slate-800
+                    p-6 sm:p-8 
+                    border border-slate-200 dark:border-slate-800
                 ">
 
                     {/* Switch Tabs */}
                     <div className="
                         flex gap-3 mb-8
-                        bg-gray-100 dark:bg-slate-800 
-                        rounded-lg p-1
+                        bg-slate-100 dark:bg-slate-800 
+                        rounded-xl p-1
                     ">
                         <button
                             onClick={() => setMode('login')}
                             className={`
-                                flex-1 py-2.5 px-4 rounded-md font-semibold transition flex items-center justify-center gap-2
+                                flex-1 py-2.5 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2
                                 ${mode === 'login'
-                                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-md'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
                                 }
                             `}
                         >
@@ -66,10 +66,10 @@ export default function AuthPage({ auth }) {
                         <button
                             onClick={() => setMode('register')}
                             className={`
-                                flex-1 py-2.5 px-4 rounded-md font-semibold transition flex items-center justify-center gap-2
+                                flex-1 py-2.5 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2
                                 ${mode === 'register'
-                                    ? 'bg-white dark:bg-slate-700 text-green-600 dark:text-green-400 shadow-md'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
                                 }
                             `}
                         >
@@ -84,23 +84,23 @@ export default function AuthPage({ auth }) {
                     {mode === 'forgot' && <ForgotPasswordForm onSwitchToLogin={() => setMode('login')} />}
 
                     {/* Login/Register Link */}
-                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-800">
+                    <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
                         {mode === 'login' ? (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                            <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
                                 Don't have an account?{" "}
                                 <button
                                     onClick={() => setMode('register')}
-                                    className="text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+                                    className="text-cyan-600 dark:text-cyan-400 font-semibold hover:underline transition-colors"
                                 >
                                     Register here
                                 </button>
                             </p>
                         ) : (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                            <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
                                 Already have an account?{" "}
                                 <button
                                     onClick={() => setMode('login')}
-                                    className="text-green-600 dark:text-green-400 font-semibold hover:underline"
+                                    className="text-cyan-600 dark:text-cyan-400 font-semibold hover:underline transition-colors"
                                 >
                                     Login here
                                 </button>
@@ -108,28 +108,27 @@ export default function AuthPage({ auth }) {
                         )}
                     </div>
                 </div>
-
                 {/* Feature Icons */}
-                <div className="mt-8 grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                        <div className="flex justify-center mb-2">
-                            <TrendingUp className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                <div className="mt-10 grid grid-cols-3 gap-4">
+                    <div className="text-center space-y-2">
+                        <div className="flex justify-center">
+                            <TrendingUp className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">Track Stocks</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Track Stocks</p>
                     </div>
 
-                    <div className="text-center">
-                        <div className="flex justify-center mb-2">
-                            <Briefcase className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                    <div className="text-center space-y-2">
+                        <div className="flex justify-center">
+                            <Briefcase className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">Manage Portfolio</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Manage Portfolio</p>
                     </div>
 
-                    <div className="text-center">
-                        <div className="flex justify-center mb-2">
-                            <PieChart className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                    <div className="text-center space-y-2">
+                        <div className="flex justify-center">
+                            <PieChart className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">Analyze Returns</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Analyze Returns</p>
                     </div>
                 </div>
             </div>
