@@ -8,9 +8,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class UserService {
+
+    private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9\\s]).{12,}$");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -21,8 +24,24 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    public void validatePasswordPolicy(String password) {
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+        if (password.length() < 12) {
+            throw new IllegalArgumentException("Password must be at least 12 characters long");
+        }
+        if (password.chars().anyMatch(Character::isWhitespace)) {
+            throw new IllegalArgumentException("Password cannot contain spaces");
+        }
+        if (!PASSWORD_PATTERN.matcher(password).matches()) {
+            throw new IllegalArgumentException("Password must include uppercase, lowercase, a number, and a special character");
+        }
+    }
+
     // ---------------------- Register User ----------------------
     public User registerUser(String email, String password) {
+        validatePasswordPolicy(password);
 
         if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("Email already registered");
@@ -69,6 +88,8 @@ public class UserService {
     }
 
     public boolean resetPasswordWithToken(String token, String newPassword) {
+        validatePasswordPolicy(newPassword);
+
         Optional<User> userOpt = userRepository.findByPasswordResetToken(token);
         if (userOpt.isEmpty()) return false;
         User user = userOpt.get();

@@ -1,46 +1,82 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { apiRequest } from '../api/client.js';
+import { LineChart as LineChartIcon } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import EmptyState from './EmptyState.jsx';
+import StatusMessage from './StatusMessage.jsx';
 
-export default function PerformanceChart({ token }) {
+function PerformanceChart({ token }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  console.log('[PerformanceChart] Received token prop:', token ? `${token.substring(0, 20)}...` : 'null/undefined');
-
   useEffect(() => {
-    console.log('[PerformanceChart.useEffect] token:', token ? `${token.substring(0, 20)}...` : 'null/undefined');
-    
     if (!token) {
-      console.log('[PerformanceChart] Skipping API call - no token');
       setLoading(false);
-      return;
-    } // <-- skip API if token missing
+      return; // skips API if token missing
+    }
+
+    const controller = new AbortController();
+    const signal = controller.signal;
 
     async function fetchData() {
       try {
         setLoading(true);
-        const res = await apiRequest('/api/snapshots', { token });
-        const formatted = res.snapshots.map(s => ({
+        const res = await apiRequest('/api/snapshots', { token, signal });
+        const formatted = (res.snapshots || []).map(s => ({
           date: s.as_of_date,
           value: Number(s.total_value_inr),
         }));
         setData(formatted);
+        setError('');
       } catch (e) {
-        setError(e.message);
+        if (e.name === 'AbortError') return;
+        setError(e.message || 'Failed to load performance data');
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
+
+    return () => controller.abort();
   }, [token]);
 
   if (!token) return null; // <-- nothing until token ready
-  if (loading) return <div className="text-center py-8">Loading performance data...</div>;
-  if (error) return <div className="text-red-600 text-sm">{error}</div>;
-  if (!data.length) return <div className="text-center py-8 text-gray-500">No performance data available.</div>;
+  if (loading) return (
+    <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800">
+      <h2 className="font-semibold mb-4 text-slate-800 dark:text-white">Portfolio Performance</h2>
+      <div className="flex items-center justify-center py-16">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center animate-pulse">
+            <LineChartIcon className="w-5 h-5 text-slate-400" />
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 animate-pulse">Loading performance data...</p>
+        </div>
+      </div>
+    </div>
+  );
+  if (error) return (
+    <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800">
+      <h2 className="font-semibold mb-4 text-slate-800 dark:text-white">Portfolio Performance</h2>
+      <StatusMessage
+        variant="error"
+        title="Chart unavailable"
+        message={error}
+        retryLabel="Retry"
+        onRetry={() => { setError(''); setLoading(true); }}
+      />
+    </div>
+  );
+  if (!data.length) return (
+    <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800">
+      <h2 className="font-semibold mb-4 text-slate-800 dark:text-white">Portfolio Performance</h2>
+      <EmptyState
+        preset="noPerformance"
+        size="sm"
+      />
+    </div>
+  );
 
   return (
     <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800">
@@ -81,3 +117,5 @@ export default function PerformanceChart({ token }) {
     </div>
   );
 }
+
+export default memo(PerformanceChart);

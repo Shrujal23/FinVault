@@ -69,7 +69,7 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
                   setCurrentPage("home");
                 }
               }}
-              className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 transition-all duration-300 select-none shrink-0"
+              className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 transition-all duration-300 select-none shrink-0 hover:drop-shadow-[0_1px_3px_rgba(7,188,255,0.3)] dark:hover:drop-shadow-[0_1px_4px_rgba(7,188,255,0.4)]"
             >
               FinVault
             </div>
@@ -87,7 +87,7 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
                       className={`flex items-center gap-2 xl:gap-2.5 px-3 xl:px-5 py-2 xl:py-2.5 rounded-full text-sm xl:text-base font-medium transition-all duration-200 ${
                         isActive
                           ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-gray-200/60 dark:hover:bg-slate-700/60"
                       }`}
                     >
                       <Icon className="w-4 h-4 shrink-0" />
@@ -101,20 +101,6 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
 
               {auth.token && (
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={goSettings}
-                    aria-label="Account settings"
-                    aria-current={currentPage === "settings" ? "page" : undefined}
-                    className={`p-2.5 rounded-xl border transition-all ${
-                      currentPage === "settings"
-                        ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400"
-                        : "border-cyan-200/50 dark:border-cyan-800/50 bg-gradient-to-r from-cyan-500/10 to-blue-600/10 hover:from-cyan-500/20 hover:to-blue-600/20 text-slate-700 dark:text-slate-200"
-                    }`}
-                  >
-                    <Settings className="w-5 h-5" />
-                  </button>
-
                   <div ref={dropdownRef} className="relative">
                     <button
                       type="button"
@@ -182,7 +168,7 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
         </div>
 
         {mobileMenuOpen && (
-          <div className="lg:hidden fixed inset-x-0 top-[52px] sm:top-16 max-h-[calc(100dvh-3.5rem)] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-gray-200 dark:border-slate-800 z-50 shadow-xl">
+          <div className="lg:hidden fixed inset-x-0 top-[52px] sm:top-16 max-h-[calc(100dvh-3.5rem)] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-gray-200 dark:border-slate-800 z-50 shadow-xl animate-in slide-in-from-top-1 duration-300">
             <div className="px-4 py-6 space-y-3">
               {navItems.map((item) => {
                 const Icon = item.icon;

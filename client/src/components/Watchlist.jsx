@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client.js';
 import StockSearch from './StockSearch.jsx';
+import EmptyState from './EmptyState.jsx';
+import StatusMessage from './StatusMessage.jsx';
 
 export default function Watchlist({ token }) {
 	const [items, setItems] = useState([]);
@@ -104,7 +106,7 @@ export default function Watchlist({ token }) {
 				</div>
 			</form>
 
-			{error && <div className="text-red-600 text-sm mb-2">{error}</div>}
+			{error && <StatusMessage variant="error" message={error} onDismiss={() => setError('')} />}
 
 			<div className="overflow-auto">
 				<table className="w-full text-sm text-slate-700 dark:text-slate-300">
@@ -142,6 +144,13 @@ export default function Watchlist({ token }) {
 
 				</table>
 			</div>
+
+			{!loading && items.length === 0 && (
+				<EmptyState
+					preset="noWatchlist"
+					size="sm"
+				/>
+			)}
 		</div>
 	);
 }

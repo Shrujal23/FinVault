@@ -6,14 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-import org.json.JSONObject;
-import org.json.JSONArray;
 
 import com.fintech.entity.Asset;
 import com.fintech.entity.User;
@@ -127,8 +126,17 @@ public class AssetService {
             String response = restTemplate.getForObject(url, String.class);
             if (response != null && !response.isEmpty()) {
                 JSONObject root = new JSONObject(response);
-                for (String id : root.keySet()) {
-                    map.put(id.toUpperCase(), new BigDecimal(root.getJSONObject(id).getDouble("inr")));
+                java.util.Iterator<String> keys = root.keys();
+                while (keys.hasNext()) {
+                    String id = keys.next();
+                    try {
+                        JSONObject obj = root.getJSONObject(id);
+                        if (obj.has("inr")) {
+                            map.put(id.toUpperCase(), new BigDecimal(obj.getDouble("inr")));
+                        }
+                    } catch (Exception e) {
+                        // skip malformed entries
+                    }
                 }
             }
         } catch (Exception ignored) {}

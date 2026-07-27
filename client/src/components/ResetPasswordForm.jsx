@@ -35,13 +35,15 @@ export default function ResetPasswordForm({ token: propToken, onDone }) {
         validate();
     }, [token]);
 
+    const validatePasswordPolicy = (pwd) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{12,}$/.test(pwd);
+
     async function onSubmit(e) {
         e.preventDefault();
         setError('');
         setSuccess('');
 
-        if (!password || password.length < 6) {
-            setError('Password must be at least 6 characters');
+        if (!validatePasswordPolicy(password)) {
+            setError('Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character');
             return;
         }
         if (password !== confirm) {

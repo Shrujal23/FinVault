@@ -1,6 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
 
-export async function apiRequest(path, { method = 'GET', body, token: inputToken } = {}) {
+export async function apiRequest(path, { method = 'GET', body, token: inputToken, signal } = {}) {
     const headers = { 'Content-Type': 'application/json' };
 
     const token = inputToken || localStorage.getItem('token');
@@ -15,7 +15,8 @@ export async function apiRequest(path, { method = 'GET', body, token: inputToken
             method,
             headers,
             body: body ? JSON.stringify(body) : undefined,
-            credentials: 'include'
+            credentials: 'include',
+            signal
         });
     } catch (e) {
         console.error('Network error', e);
@@ -27,8 +28,9 @@ export async function apiRequest(path, { method = 'GET', body, token: inputToken
         console.error('API request failed', { path, status: res.status, body: err });
 
         if (res.status === 401 || res.status === 403) {
+            // Clear token and surface an error to the app instead of forcing a navigation.
+            // Let UI code decide how to redirect or show a sign-in modal.
             localStorage.removeItem('token');
-            window.location.href = '/login';
             throw new Error('Unauthorized/Forbidden: Token missing, invalid, or expired.');
         }
 

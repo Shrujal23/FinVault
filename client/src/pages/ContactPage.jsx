@@ -12,6 +12,8 @@ import {
   LifeBuoy,
   ArrowLeft,
 } from 'lucide-react';
+import StatusMessage from '../components/StatusMessage.jsx';
+
 
 export default function ContactPage({ setCurrentPage }) {
   const [formData, setFormData] = useState({
@@ -60,11 +62,11 @@ export default function ContactPage({ setCurrentPage }) {
     }
   }, [formData]);
 
-  const inputClass = "w-full mt-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-5 py-3.5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 outline-none transition-all";
-  const labelClass = "text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2";
+  const inputClass = "w-full mt-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white/90 dark:bg-slate-950/80 px-4 py-3.5 text-slate-900 dark:text-white placeholder:text-slate-400 shadow-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none transition-all";
+  const labelClass = "text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 flex items-center gap-2";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 pb-12">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.08),_transparent_40%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.15),_transparent_35%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)] pb-12">
       <div className="max-w-6xl mx-auto px-5 sm:px-6 lg:px-8 py-8">
         {setCurrentPage && (
           <button
@@ -76,65 +78,53 @@ export default function ContactPage({ setCurrentPage }) {
           </button>
         )}
 
-        <div className="grid lg:grid-cols-5 gap-10 items-start">
-          {/* Sidebar Info */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="relative overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 shadow-xl">
-              <div className="absolute -right-12 -top-12 h-52 w-52 rounded-full bg-cyan-400/10 dark:bg-cyan-500/10 blur-3xl" />
-              
-              <div className="relative">
-                <div className="inline-flex items-center gap-2 text-cyan-600 dark:text-cyan-400 text-xs font-semibold tracking-widest mb-3">
-                  FINVAULT SUPPORT
-                </div>
-                
-                <h1 className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
-                  Get in touch
-                </h1>
-                
-                <p className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Questions. Bug reports. Feature requests. We read every message and reply as fast as we can.
-                </p>
+        <div className="grid lg:grid-cols-[1.05fr_1.35fr] gap-8 items-start">
+          <div className="space-y-6">
+            <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/90 p-8 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.22)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-cyan-700 dark:text-cyan-300">
+                FinVault support
+              </div>
 
-                <div className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-cyan-50 dark:bg-cyan-950 px-4 py-2 text-sm text-cyan-700 dark:text-cyan-300">
-                  
-                  Real human support
-                </div>
+              <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+                We’re here if you need us.
+              </h1>
+
+              <p className="mt-4 text-base leading-7 text-slate-600 dark:text-slate-300">
+                Whether you’re stuck on a feature, want to share feedback, or just want to say hello, this is the right place. We read every note and try to reply thoughtfully.
+              </p>
+
+              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                <p className="font-medium text-slate-800 dark:text-slate-100">Most messages are answered within a business day.</p>
               </div>
             </div>
 
-            {/* Quick Info Cards */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-1 gap-5">
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-100 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/90">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300">
                   <Clock className="w-5 h-5" />
                 </div>
-                <p className="mt-5 font-semibold text-slate-900 dark:text-white">Typical response</p>
-                <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Within 1–2 business days</p>
+                <p className="mt-4 font-semibold text-slate-900 dark:text-white">Typical response</p>
+                <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">Usually within 1–2 business days.</p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/90">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
                   <LifeBuoy className="w-5 h-5" />
                 </div>
-                <p className="mt-5 font-semibold text-slate-900 dark:text-white">Direct email</p>
-                <a 
-                  href="mailto:support@finvault.app" 
-                  className="mt-1.5 block text-cyan-600 dark:text-cyan-400 hover:underline font-medium"
-                >
+                <p className="mt-4 font-semibold text-slate-900 dark:text-white">Prefer email?</p>
+                <a href="mailto:support@finvault.app" className="mt-1 block text-sm font-medium text-cyan-600 hover:underline dark:text-cyan-400">
                   support@finvault.app
                 </a>
               </div>
             </div>
           </div>
 
-          {/* Contact Form */}
-          <div className="lg:col-span-3">
-            <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 shadow-xl">
-              <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Drop us a line</h2>
-              <p className="mt-1 text-slate-500 dark:text-slate-400">We usually reply within a day.</p>
+          <div className="rounded-[28px] border border-slate-200/80 bg-white/90 p-7 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.2)] dark:border-slate-700 dark:bg-slate-900/90 sm:p-8">
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Send a message</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Tell us what’s on your mind and we’ll get back to you as soon as we can.</p>
 
               <form onSubmit={onSubmit} className="mt-8 space-y-6">
-                <div className="grid sm:grid-cols-2 gap-6">
+                <div className="grid gap-6 sm:grid-cols-2">
                   <div>
                     <label className={labelClass}>
                       <User className="w-4 h-4" />
@@ -201,23 +191,25 @@ export default function ContactPage({ setCurrentPage }) {
                 </div>
 
                 {error && (
-                  <div className="flex items-start gap-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 p-4 text-red-800 dark:text-red-300">
-                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                    <span>{error}</span>
-                  </div>
+                  <StatusMessage
+                    variant="error"
+                    message={error}
+                    onDismiss={() => setError('')}
+                  />
                 )}
 
                 {success && (
-                  <div className="flex items-start gap-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 p-4 text-emerald-800 dark:text-emerald-200">
-                    <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                    <span>{success}</span>
-                  </div>
+                  <StatusMessage
+                    variant="success"
+                    message={success}
+                    onDismiss={() => setSuccess('')}
+                  />
                 )}
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 px-10 py-4 font-semibold text-white shadow-lg shadow-cyan-500/25 hover:from-cyan-500 hover:to-blue-500 active:scale-[0.985] disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 rounded-2xl bg-slate-900 px-10 py-4 font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-cyan-600 dark:hover:bg-cyan-500"
                 >
                   {loading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -231,6 +223,5 @@ export default function ContactPage({ setCurrentPage }) {
           </div>
         </div>
       </div>
-    </div>
-  );
+  )
 }

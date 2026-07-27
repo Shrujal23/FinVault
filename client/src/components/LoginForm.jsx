@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { apiRequest } from '../api/client.js';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import StatusMessage from './StatusMessage.jsx';
 
 export default function LoginForm({ auth, onSwitchToForgot }) {
     const [formData, setFormData] = useState({
@@ -123,10 +124,11 @@ export default function LoginForm({ auth, onSwitchToForgot }) {
 
             {/* Error Message */}
             {error && (
-                <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                    <span>{error}</span>
-                </div>
+                <StatusMessage
+                    variant="error"
+                    message={error}
+                    onDismiss={() => setError('')}
+                />
             )}
 
             {/* Submit Button */}

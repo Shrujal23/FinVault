@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { Loader2, Newspaper } from 'lucide-react';
+import EmptyState from './EmptyState.jsx';
+import StatusMessage from './StatusMessage.jsx';
 
 export default function MarketNews() {
   const [articles, setArticles] = useState([]);
@@ -44,10 +46,19 @@ export default function MarketNews() {
         </div>
       )}
       {error && !loading && (
-        <p className="text-sm text-red-600">{error}</p>
+        <StatusMessage
+          variant="error"
+          message={error}
+          retryLabel="Retry"
+          onRetry={() => { setError(''); setLoading(true); window.location.reload(); }}
+          onDismiss={() => setError('')}
+        />
       )}
       {!loading && !error && articles.length === 0 && (
-        <p className="text-sm text-slate-500 dark:text-slate-400">No headlines available.</p>
+        <EmptyState
+          preset="noNews"
+          size="sm"
+        />
       )}
       <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
         {articles.map((a, idx) => (

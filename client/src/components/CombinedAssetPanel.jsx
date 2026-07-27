@@ -67,26 +67,28 @@ export default function CombinedAssetPanel({ rows = [], allocation = [], token, 
       {/* Main Content */}
       <div className={`w-full ${view === 'split' ? 'flex flex-col lg:flex-row gap-4' : ''}`}>
         {(view === 'split' || view === 'table') && (
-          <div className={`${view === 'split' ? 'lg:w-2/3' : 'w-full'}`}>
-            <AssetTable
-              rows={rows}
-              onChange={onChange}
-              token={token}
-              hoveredSymbol={hoveredSymbol}
-              selectedSymbol={selectedSymbol}
-              externalFilter={selectedSymbol || ''}
-            />
+          <div className={`${view === 'split' ? 'lg:w-2/3 min-h-0' : 'w-full'}`}>
+            {/* keep table area scrollable and constrained so the chart doesn't push layout */}
+            <div className="min-h-0 h-[420px] lg:h-auto overflow-auto">
+              <AssetTable
+                rows={rows}
+                onChange={onChange}
+                token={token}
+                hoveredSymbol={hoveredSymbol}
+                selectedSymbol={selectedSymbol}
+                externalFilter={selectedSymbol || ''}
+              />
+            </div>
           </div>
         )}
 
         {(view === 'split' || view === 'chart') && (
-          <div className={`${view === 'split' ? 'lg:w-1/3' : 'w-full'}`}>
-            <div className="bg-white/0 dark:bg-transparent rounded-md p-2">
+          <div className={`${view === 'split' ? 'lg:w-1/3 flex-shrink-0' : 'w-full'}`}>
+            {/* align chart top with table and constrain size to avoid cluttering the table */}
+            <div className="flex items-start justify-center p-0 h-[360px] lg:h-auto">
               <AllocationPie data={allocation} onHover={setHoveredSymbol} onClick={(sym) => {
-                // toggle selection: clicking same symbol clears selection
                 const newSel = (selectedSymbol === sym) ? null : sym;
                 setSelectedSymbol(newSel);
-                // when selecting, show split or table for focus
                 if (newSel) setView('split');
               }} />
             </div>

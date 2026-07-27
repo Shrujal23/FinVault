@@ -57,26 +57,18 @@ export default function Billing({ auth, setCurrentPage }) {
     setLoadingPlan(planId);
 
     try {
-      const res = await fetch(
-        `${API_BASE}/api/pay/create-session?plan=${encodeURIComponent(planId)}&cycle=${encodeURIComponent(billingCycle)}`,
-        {
-          method: 'POST',
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        }
-      );
-      if (res.ok) {
-        const body = await res.json();
-        const url = body.url || body.checkoutUrl;
-        if (url) {
-          window.open(url, '_blank', 'noopener');
-          setLoadingPlan(null);
-          return;
-        }
+      const body = await apiRequest(`/api/pay/create-session?plan=${encodeURIComponent(planId)}&cycle=${encodeURIComponent(billingCycle)}`, {
+        method: 'POST',
+        token,
+      });
+      const url = body?.url || body?.checkoutUrl;
+      if (url) {
+        window.open(url, '_blank', 'noopener');
+        setLoadingPlan(null);
+        return;
       }
-    } catch {
-      /* fallback below */
+    } catch (e) {
+      // fallback below
     }
 
     const fallback = `https://example.com/checkout?plan=${encodeURIComponent(planId)}&cycle=${billingCycle}`;

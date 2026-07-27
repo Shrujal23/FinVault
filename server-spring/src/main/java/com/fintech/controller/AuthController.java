@@ -2,6 +2,7 @@ package com.fintech.controller;
 
 import com.fintech.entity.JwtUtils;
 import com.fintech.entity.User;
+import com.fintech.dto.UserDto;
 import com.fintech.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,15 +30,9 @@ public class AuthController {
     @Value("${auth.return-reset-token:false}")
     private boolean returnResetToken;
 
-    // Helper to safely build the user response to avoid NullPointerExceptions 
-    // if the user hasn't set their name yet!
-    private Map<String, Object> buildUserPayload(User user) {
-        Map<String, Object> payload = new java.util.HashMap<>();
-        payload.put("id", user.getId());
-        payload.put("email", user.getEmail());
-        if (user.getName() != null) payload.put("name", user.getName());
-        if (user.getAvatarUrl() != null) payload.put("avatarUrl", user.getAvatarUrl());
-        return payload;
+    // Build a safe DTO to return to clients (excludes sensitive fields)
+    private UserDto buildUserPayload(User user) {
+        return UserDto.fromEntity(user);
     }
 
     // ---------------- Register ----------------
@@ -52,16 +47,17 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("error", "Password is required"));
 
         try {
+            userService.validatePasswordPolicy(password);
             User user = userService.registerUser(email, password);
             String token = jwtUtils.generateToken(user);
 
             logger.info("User registered: {}, Token issued", email);
 
-            return ResponseEntity.ok(Map.of(
+                return ResponseEntity.ok(Map.of(
                     "message", "User registered successfully",
                     "token", token,
                     "user", buildUserPayload(user)
-            ));
+                ));
         } catch (RuntimeException e) {
             logger.warn("Registration error for {}: {}", email, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -86,11 +82,11 @@ public class AuthController {
 
             logger.info("User logged in: {}, User ID: {}, Token issued", email, user.getId());
 
-            return ResponseEntity.ok(Map.of(
+                return ResponseEntity.ok(Map.of(
                     "message", "Login successful",
                     "token", token,
                     "user", buildUserPayload(user)
-            ));
+                ));
         }
 
         logger.warn("Failed login attempt for: {}", email);
@@ -149,8 +145,14 @@ public class AuthController {
         if (token == null || token.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Token is required"));
         }
-        if (newPassword == null || newPassword.isBlank() || newPassword.length() < 6) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Password must be at least 6 characters long"));
+        if (newPassword == null || newPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Password is required"));
+        }
+
+        try {
+            userService.validatePasswordPolicy(newPassword);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
 
         boolean ok = userService.resetPasswordWithToken(token, newPassword);

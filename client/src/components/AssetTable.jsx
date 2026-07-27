@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { apiRequest } from "../api/client.js";
 import AssetForm from "./AssetForm.jsx";
+import EmptyState from "./EmptyState.jsx";
 import { ArrowUp, ArrowDown, Search, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function AssetTable({ rows = [], onChange, token, hoveredSymbol, externalFilter = '', selectedSymbol = null }) {
@@ -81,9 +82,12 @@ export default function AssetTable({ rows = [], onChange, token, hoveredSymbol, 
       {/* Mobile Card View */}
       <div className="space-y-3 mb-6 md:hidden">
         {view.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-center text-sm text-slate-600 dark:text-slate-400">
-            No assets yet. Add your first holding with the &quot;Add New Asset&quot; form below.
-          </div>
+          <EmptyState
+            preset="noAssets"
+            size="sm"
+            actionLabel="Add an asset"
+            onAction={() => window.location.hash = '#add-asset'}
+          />
         ) : (
           view.map((a) => {
             const isSelected = hoveredSymbol === a.symbol || selectedSymbol === a.symbol;
@@ -179,14 +183,14 @@ export default function AssetTable({ rows = [], onChange, token, hoveredSymbol, 
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {view.length === 0 ? (
               <tr className="bg-white dark:bg-slate-900">
-                <td colSpan={hasPriceData ? 9 : 5} className="py-12 px-6 text-center text-gray-500 dark:text-gray-400">
-                  <div className="space-y-2">
-                    <p className="font-semibold">No assets yet</p>
-                    <p className="text-sm">Add your first holding with the "Add New Asset" form below.</p>
-                    <div className="mt-3">
-                      <button type="button" onClick={() => window.location.hash = '#add-asset'} className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white transition-colors">Add an asset</button>
-                    </div>
-                  </div>
+                <td colSpan={hasPriceData ? 9 : 5} className="p-0">
+                  <EmptyState
+                    preset="noAssets"
+                    size="md"
+                    actionLabel="Add your first asset"
+                    onAction={() => window.location.hash = '#add-asset'}
+                    className="rounded-none border-0"
+                  />
                 </td>
               </tr>
             ) : (

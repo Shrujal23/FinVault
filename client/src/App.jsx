@@ -15,12 +15,20 @@ export default function App() {
     return localStorage.getItem('token') || sessionStorage.getItem('token') || '';
   });
 
-  const [user, setUser] = useState(() => {
+  const [user, setUserState] = useState(() => {
     const saved = localStorage.getItem('user') || sessionStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState(() => {
+    const path = window.location.pathname || '';
+    if (path === '/' || path === '') return 'home';
+    // map known paths to pages
+    const p = path.replace(/^\//, '');
+    // treat '/login' and '/register' as settings/auth entry
+    if (p === 'login' || p === 'register' || p === 'auth') return 'settings';
+    return p;
+  });
   const logoutTimer = useRef(null);
 
   const parseJwt = (tkn) => {
@@ -34,6 +42,24 @@ export default function App() {
       return JSON.parse(jsonPayload);
     } catch (e) {
       return null;
+    }
+  };
+
+  const setUser = (value, remember = false) => {
+    setUserState(value || null);
+
+    if (value) {
+      const serialized = JSON.stringify(value);
+      if (remember) {
+        localStorage.setItem('user', serialized);
+        sessionStorage.removeItem('user');
+      } else {
+        sessionStorage.setItem('user', serialized);
+        localStorage.removeItem('user');
+      }
+    } else {
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
     }
   };
 
@@ -60,7 +86,7 @@ export default function App() {
         if (delay > 0) {
           logoutTimer.current = setTimeout(() => {
             setToken('', false);
-            setUser(null);
+            setUser(null, false);
             setCurrentPage('home');
           }, delay);
         }
@@ -75,7 +101,7 @@ export default function App() {
 
   const logout = () => {
     setToken('', false);
-    setUser(null);
+    setUser(null, false);
     setCurrentPage('home');
   };
 
@@ -86,6 +112,29 @@ export default function App() {
     setUser,
     logout,
   };
+
+  // Navigation helper: updates state and browser URL
+  const navigate = (page) => {
+    setCurrentPage(page);
+    try {
+      const url = page === 'home' ? '/' : `/${page}`;
+      window.history.pushState({}, '', url);
+    } catch (e) {
+      // ignore (e.g., during SSR or unusual env)
+    }
+  };
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const onPop = () => {
+      const path = window.location.pathname || '';
+      const p = path === '/' ? 'home' : path.replace(/^\//, '');
+      if (p === 'login' || p === 'register' || p === 'auth') setCurrentPage('settings');
+      else setCurrentPage(p || 'home');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   // Main Page Renderer
   const renderPage = () => {
@@ -100,29 +149,29 @@ export default function App() {
     switch (currentPage) {
       case 'home':
       case 'dashboard':
-        return <Dashboard auth={auth} setCurrentPage={setCurrentPage} />;
+        return <Dashboard auth={auth} setCurrentPage={navigate} />;
 
       case 'about':
-        return <AboutUs setCurrentPage={setCurrentPage} />;
+        return <AboutUs setCurrentPage={navigate} />;
 
       case 'dividends':
         return <DividendMonitor auth={auth} />;
 
       case 'billing':
-        return <Billing auth={auth} setCurrentPage={setCurrentPage} />;
+        return <Billing auth={auth} setCurrentPage={navigate} />;
 
       case 'contact':
-        return <ContactPage setCurrentPage={setCurrentPage} />;
+        return <ContactPage setCurrentPage={navigate} />;
 
       case 'settings':
         return token ? (
-          <SettingsPage auth={auth} setCurrentPage={setCurrentPage} />
+          <SettingsPage auth={auth} setCurrentPage={navigate} />
         ) : (
           <AuthPage auth={auth} />
         );
 
       default:
-        return <Dashboard auth={auth} setCurrentPage={setCurrentPage} />;
+        return <Dashboard auth={auth} setCurrentPage={navigate} />;
     }
   };
 
@@ -130,7 +179,7 @@ export default function App() {
     <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       <Navbar 
         auth={auth} 
-        setCurrentPage={setCurrentPage} 
+        setCurrentPage={navigate} 
         currentPage={currentPage} 
       />
       <main className="flex-grow w-full">

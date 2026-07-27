@@ -10,6 +10,7 @@ import {
   TrendingUp, 
   Wallet 
 } from 'lucide-react';
+import EmptyState from './EmptyState.jsx';
 
 function loadDividends() {
   try {
@@ -183,11 +184,11 @@ export default function DividendTable({ token, days = 90, refreshKey = 0 }) {
 
       {/* Table / Cards */}
       {sortedDividends.length === 0 ? (
-        <div className="text-center py-16 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
-          <Coins className="mx-auto w-12 h-12 text-slate-300 dark:text-slate-600" />
-          <p className="mt-4 font-medium text-slate-900 dark:text-white">No dividends recorded yet</p>
-          <p className="text-sm text-slate-500 mt-1">Add your first dividend using the form on the left</p>
-        </div>
+        <EmptyState
+          preset="noDividends"
+          size="md"
+          description="Add your first dividend using the form on the right to start tracking ex-dates and estimated payouts."
+        />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
           <table className="w-full text-sm">

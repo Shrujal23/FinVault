@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Mail, Lock, Eye, EyeOff, Check, X, AlertCircle, Shield, Loader2 } from 'lucide-react';
 import { apiRequest } from '../api/client.js';
+import StatusMessage from './StatusMessage.jsx';
 
 const PasswordField = ({
     label,
@@ -93,6 +94,14 @@ export default function RegisterForm({ auth }) {
     }, []);
 
     const strength = getPasswordStrength(formData.password);
+    const passwordChecks = [
+        { id: 'length', label: 'At least 12 characters', met: formData.password.length >= 12 },
+        { id: 'uppercase', label: 'One uppercase letter', met: /[A-Z]/.test(formData.password) },
+        { id: 'lowercase', label: 'One lowercase letter', met: /[a-z]/.test(formData.password) },
+        { id: 'number', label: 'One number', met: /\d/.test(formData.password) },
+        { id: 'special', label: 'One special character', met: /[^A-Za-z0-9\s]/.test(formData.password) },
+        { id: 'spaces', label: 'No spaces', met: !/\s/.test(formData.password) },
+    ];
     const passwordsMatch = formData.confirmPassword && 
                           formData.password === formData.confirmPassword;
     const matchStatus = formData.confirmPassword 
@@ -100,6 +109,7 @@ export default function RegisterForm({ auth }) {
         : null;
 
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validatePasswordPolicy = (pwd) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{12,}$/.test(pwd);
 
     const handleSubmit = useCallback(async (e) => {
         e.preventDefault();
@@ -109,8 +119,8 @@ export default function RegisterForm({ auth }) {
             setError('Please enter a valid email address');
             return;
         }
-        if (formData.password.length < 8) {
-            setError('Password must be at least 8 characters long');
+        if (!validatePasswordPolicy(formData.password)) {
+            setError('Password must be at least 12 characters and include uppercase, lowercase, a number, and a special character');
             return;
         }
         if (!passwordsMatch) {
@@ -182,7 +192,7 @@ export default function RegisterForm({ auth }) {
 
             {/* Password Strength */}
             {formData.password && (
-                <div className="space-y-2 pl-1">
+                <div className="space-y-3 pl-1">
                     <div className="flex gap-1.5">
                         {[1, 2, 3, 4, 5].map((i) => (
                             <div
@@ -195,6 +205,24 @@ export default function RegisterForm({ auth }) {
                         <Shield className="w-3.5 h-3.5" />
                         Strength: <span className="font-medium text-slate-700 dark:text-slate-300">{strength.label}</span>
                     </p>
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Password checklist</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{passwordChecks.filter((check) => check.met).length}/{passwordChecks.length} complete</p>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            {passwordChecks.map((check) => (
+                                <div key={check.id} className={`flex items-center gap-2 text-sm ${check.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                                    {check.met ? (
+                                        <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                    ) : (
+                                        <span className="h-4 w-4 rounded-full border border-slate-300 dark:border-slate-600" />
+                                    )}
+                                    <span>{check.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -233,10 +261,11 @@ export default function RegisterForm({ auth }) {
 
             {/* Error Message */}
             {error && (
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm" role="alert">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                    <span>{error}</span>
-                </div>
+                <StatusMessage
+                    variant="error"
+                    message={error}
+                    onDismiss={() => setError('')}
+                />
             )}
 
             {/* Submit Button */}

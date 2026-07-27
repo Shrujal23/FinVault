@@ -7,6 +7,8 @@ import PerformanceChart from '../components/PerformanceChart.jsx';
 import { CardsSkeleton, TableSkeleton } from '../components/Skeleton.jsx';
 import MarketNews from '../components/MarketNews.jsx';
 import Watchlist from '../components/Watchlist.jsx';
+import EmptyState from '../components/EmptyState.jsx';
+import StatusMessage from '../components/StatusMessage.jsx';
 import {
   Wallet,
   PieChart,
@@ -166,13 +168,14 @@ export default function Dashboard({ auth, setCurrentPage }) {
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" />
-              <span className="font-medium">We couldn&apos;t load your portfolio.</span>
-            </div>
-            <span className="text-sm opacity-90">{error}</span>
-          </div>
+          <StatusMessage
+            variant="error"
+            title="We couldn't load your portfolio"
+            message={error}
+            retryLabel="Retry"
+            onRetry={refreshData}
+            onDismiss={() => setError('')}
+          />
         )}
 
         {/* Guest Banner */}
@@ -197,30 +200,15 @@ export default function Dashboard({ auth, setCurrentPage }) {
           </div>
         )}
 
-        {/* Onboarding empty state when no assets */}
         {!loading && !error && (!metrics || !metrics.items?.length) && (
-          <div className="bg-white dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-1">
-                Welcome to FinVault
-              </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                Get started by adding your first asset. We&apos;ll calculate your portfolio value, P&amp;L, and allocation automatically.
-              </p>
-              <ul className="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1">
-                <li>Track stocks, mutual funds, and crypto in one place</li>
-                <li>See real-time gains and losses</li>
-                <li>Visualize your diversification and performance</li>
-              </ul>
-            </div>
-            <button
-              type="button"
-              onClick={handleAddAssetClick}
-              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500 shadow-sm font-medium text-sm whitespace-nowrap transition-all"
-            >
-              Add your first asset
-            </button>
-          </div>
+          <EmptyState
+            preset="noAssets"
+            size="lg"
+            title="Welcome to FinVault"
+            description="Get started by adding your first asset. We'll calculate your portfolio value, P&L, and allocation automatically."
+            actionLabel="Add your first asset"
+            onAction={handleAddAssetClick}
+          />
         )}
 
         {/* 1. Primary Metrics: Summary Cards */}
@@ -304,9 +292,7 @@ export default function Dashboard({ auth, setCurrentPage }) {
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="space-y-6">
             {/* Watchlist */}
             {token ? (
               <Watchlist token={token} />
@@ -325,7 +311,9 @@ export default function Dashboard({ auth, setCurrentPage }) {
                 </div>
               </div>
             )}
+          </div>
 
+          <div className="space-y-6">
             {/* Market News */}
             <MarketNews />
           </div>

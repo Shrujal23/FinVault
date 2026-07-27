@@ -114,6 +114,8 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
   const [displayName, setDisplayName] = useState(auth?.user?.name || '');
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
+  const scrollRef = useRef(null);
+  const isPointerOver = useRef(false);
 
   // Notification preferences
   const [notifPrice, setNotifPrice] = useState(() => localStorage.getItem('settings.notif.price') !== '0');
@@ -207,6 +209,36 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
     }
   }, [onClose, setCurrentPage]);
 
+  // ensure wheel/touchpad scrolling works reliably inside this container
+  const handleWheel = useCallback((e) => {
+    const el = e.currentTarget;
+    if (!el) return;
+    if (el.scrollHeight > el.clientHeight) {
+      el.scrollTop += e.deltaY;
+      e.stopPropagation();
+    }
+  }, []);
+
+  // fallback: global wheel handler when pointer is over the settings area
+  useEffect(() => {
+    const onWindowWheel = (e) => {
+      try {
+        if (!isPointerOver.current) return;
+        const el = scrollRef.current;
+        if (!el) return;
+        if (el.scrollHeight > el.clientHeight) {
+          el.scrollTop += e.deltaY;
+          e.preventDefault();
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    window.addEventListener('wheel', onWindowWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWindowWheel);
+  }, []);
+
   const groupedSettings = useMemo(() => {
     const grouped = settingsItems.reduce((acc, item) => {
     const g = item.group || 'Other';
@@ -227,6 +259,12 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
     };
     return titles[activeSection] || 'Settings';
   }, [activeSection]);
+
+  const resolvedDisplayName = useMemo(() => {
+    const raw = auth?.user?.name || auth?.user?.email || '';
+    if (!raw) return 'Investor';
+    return raw.includes('@') ? raw.split('@')[0] : raw;
+  }, [auth?.user?.name, auth?.user?.email]);
 
   const inner = (
     <div className={`flex min-h-0 flex-1 flex-col ${variant === 'page' ? 'lg:flex-row' : ''}`}>
@@ -280,16 +318,16 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
 
       {/* Mobile section tabs (page only) */}
       {variant === 'page' && (
-        <div className="flex lg:hidden gap-2 overflow-x-auto pb-3 -mx-1 px-1 scrollbar-thin">
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/80 p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 lg:hidden">
           {settingsNav.map(({ id, label }) => (
             <button
               key={id}
               type="button"
               onClick={() => setActiveSection(id)}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition ${
+              className={`flex items-center justify-center rounded-full px-3.5 py-2 text-xs font-semibold transition ${
                 activeSection === id
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  ? 'bg-cyan-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
               }`}
             >
               {label}
@@ -298,7 +336,14 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+        onWheel={handleWheel}
+        onMouseEnter={() => { isPointerOver.current = true; }}
+        onMouseLeave={() => { isPointerOver.current = false; }}
+      >
         {activeSection === 'main' && (
           <div className="p-4 sm:p-6 space-y-6">
             {variant === 'page' && (
@@ -310,9 +355,7 @@ export default function SettingsExperience({ variant = 'modal', auth, setCurrent
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Signed in</p>
-                      <p className="truncate text-lg font-bold text-slate-900 dark:text-white">
-                        {auth.user?.name || auth.user?.email?.split('@')[0] || 'Investor'}
-                      </p>
+                      <p className="truncate text-lg font-bold text-slate-900 dark:text-white">{resolvedDisplayName}</p>
                       <p className="truncate text-sm text-slate-500 dark:text-slate-400">{auth.user?.email || '—'}</p>
                     </div>
                   </div>
