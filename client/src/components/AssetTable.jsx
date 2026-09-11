@@ -1,389 +1,223 @@
-import { useMemo, useState, useEffect } from "react";
-import { apiRequest } from "../api/client.js";
-import AssetForm from "./AssetForm.jsx";
-import EmptyState from "./EmptyState.jsx";
-import { ArrowUp, ArrowDown, Search, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { useMemo, useState } from 'react';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { ArrowUp, ArrowDown, Search } from 'lucide-react';
 
-export default function AssetTable({ rows = [], onChange, token, hoveredSymbol, externalFilter = '', selectedSymbol = null }) {
-  const [editing, setEditing] = useState(null);
-  const [deleting, setDeleting] = useState(null); // { id, symbol, loading, error }
-  const [sort, setSort] = useState({ key: "symbol", dir: "asc" });
-  const [filter, setFilter] = useState("");
+// Helper to format numbers as Indian Rupees
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value || 0);
+};
 
-  const hasPriceData = rows.length > 0;
+// Helper to format percentages
+const formatPercent = (value) => {
+  return `${(value || 0).toFixed(2)}%`;
+};
 
-  // Sync external filter (like clicking a pie slice) into the table filter
-  useEffect(() => {
-    setFilter((prev) => {
-      // if externalFilter is empty, keep existing custom filter
-      if (!externalFilter) return prev;
-      return externalFilter;
-    });
-  }, [externalFilter]);
+export default function AssetTable({ assets = [] }) {
+  const [query, setQuery] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: 'marketValue', direction: 'desc' });
 
-  const view = useMemo(() => {
-    let result = rows.filter((a) => matchFilter(a, filter));
-    result.sort((a, b) => compare(a, b, sort.key, sort.dir));
-    return result;
-  }, [rows, filter, sort]);
+  const filteredAssets = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    const baseAssets = normalized
+      ? assets.filter((asset) => {
+          const symbol = String(asset.symbol || '').toLowerCase();
+          const name = String(asset.name || '').toLowerCase();
+          return symbol.includes(normalized) || name.includes(normalized);
+        })
+      : assets;
 
-  // When a symbol is selected externally, scroll it into view for the user
-  useEffect(() => {
-    if (!selectedSymbol) return;
-    // allow DOM updates to happen first
-    const id = setTimeout(() => {
-      const el = document.querySelector(`tr[data-symbol="${selectedSymbol}"]`);
-      if (el && typeof el.scrollIntoView === 'function') {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    return [...baseAssets].sort((a, b) => {
+      const direction = sortConfig.direction === 'asc' ? 1 : -1;
+
+      switch (sortConfig.key) {
+        case 'symbol':
+          return direction * String(a.symbol || '').localeCompare(String(b.symbol || ''));
+        case 'quantity':
+          return direction * (Number(a.quantity || 0) - Number(b.quantity || 0));
+        case 'avgBuyPrice':
+          return direction * (Number(a.avgBuyPrice || 0) - Number(b.avgBuyPrice || 0));
+        case 'lastPriceINR':
+          return direction * (Number(a.lastPriceINR || 0) - Number(b.lastPriceINR || 0));
+        case 'marketValue':
+          return direction * (Number(a.marketValue || 0) - Number(b.marketValue || 0));
+        case 'pnl':
+          return direction * (Number(a.pnl || 0) - Number(b.pnl || 0));
+        case 'returnPct':
+          return direction * (Number(a.returnPct || 0) - Number(b.returnPct || 0));
+        case 'name':
+        default:
+          return direction * String(a.name || '').localeCompare(String(b.name || ''));
       }
-    }, 80);
-    return () => clearTimeout(id);
-  }, [selectedSymbol]);
+    });
+  }, [assets, query, sortConfig]);
 
-  const totalMarketValue = view.reduce((sum, a) => sum + (a.marketValue || 0), 0);
+  const totals = useMemo(() => {
+    const totalQuantity = filteredAssets.reduce((sum, asset) => sum + Number(asset.quantity || 0), 0);
+    const totalCost = filteredAssets.reduce((sum, asset) => sum + Number(asset.avgBuyPrice || 0) * Number(asset.quantity || 0), 0);
+    const totalMarketValue = filteredAssets.reduce((sum, asset) => sum + Number(asset.marketValue || 0), 0);
+    const totalPnl = filteredAssets.reduce((sum, asset) => sum + Number(asset.pnl || 0), 0);
+    const totalReturnPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
-  async function onDelete(id) {
-    setDeleting(d => ({ ...d, loading: true, error: '' }));
-    try {
-      await apiRequest(`/api/assets/${id}`, { method: "DELETE", token });
-      setDeleting(null); // Close modal on success
-      onChange?.();
-    } catch (e) {
-      setDeleting(d => ({ ...d, loading: false, error: e.message || 'Failed to delete asset.' }));
+    return {
+      totalQuantity,
+      avgBuyPrice: totalQuantity > 0 ? totalCost / totalQuantity : 0,
+      totalMarketValue,
+      totalPnl,
+      totalReturnPct,
+    };
+  }, [filteredAssets]);
+
+  const handleSort = (key) => {
+    setSortConfig((current) => {
+      if (current.key === key) {
+        return {
+          key,
+          direction: current.direction === 'asc' ? 'desc' : 'asc',
+        };
+      }
+
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) {
+      return <span className="ml-1 text-slate-400">↕</span>;
     }
-  }
-  function startDelete(asset) {
-    setDeleting({ id: asset.id, symbol: asset.symbol, loading: false, error: '' });
-  }
 
-  function onSort(key) {
-    setSort((prev) =>
-      prev.key === key
-        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: "asc" }
+    return sortConfig.direction === 'asc'
+      ? <ArrowUp className="ml-1 h-3.5 w-3.5" />
+      : <ArrowDown className="ml-1 h-3.5 w-3.5" />;
+  };
+
+  if (!assets || assets.length === 0) {
+    return (
+      <div className="text-center py-12 text-slate-500 dark:text-slate-400 border-2 border-dashed rounded-xl">
+        <p className="font-medium">No assets to display.</p>
+        <p className="text-sm">Add your first asset to get started.</p>
+      </div>
     );
   }
 
   return (
-    <div className="w-full">
-      {/* Search */}
-      <div className="mb-5 relative w-full max-w-md">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-gray-400" />
-        </div>
-        <input
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Search symbol or name..."
-          className="w-full pl-11 pr-4 py-2.5 rounded-lg border dark:border-gray-600 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
-      {/* Mobile Card View */}
-      <div className="space-y-3 mb-6 md:hidden">
-        {view.length === 0 ? (
-          <EmptyState
-            preset="noAssets"
-            size="sm"
-            actionLabel="Add an asset"
-            onAction={() => window.location.hash = '#add-asset'}
+    <div className="w-full space-y-3">
+      <div className="rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/90">
+        <div className="flex items-center gap-2 text-sm">
+          <Search className="h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Filter by ticker or name"
+            className="w-full border-0 bg-transparent outline-none text-slate-700 placeholder:text-slate-400 dark:text-slate-200"
           />
-        ) : (
-          view.map((a) => {
-            const isSelected = hoveredSymbol === a.symbol || selectedSymbol === a.symbol;
-            return (
-              <div
-                key={a.id}
-                className={`rounded-lg border bg-white dark:bg-slate-900 p-4 flex flex-col gap-2 ${
-                  isSelected ? 'border-slate-400 dark:border-slate-500' : 'border-slate-200 dark:border-slate-800'
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="font-semibold text-slate-900 dark:text-white">{a.symbol}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[180px]">
-                      {a.name}
-                    </div>
-                  </div>
-                  <div className="text-right text-xs text-slate-500 dark:text-slate-400">
-                    Qty&nbsp;
-                    <span className="font-mono text-slate-800 dark:text-slate-100">
-                      {formatNum(a.quantity)}
-                    </span>
-                  </div>
-                </div>
-                {hasPriceData && (
-                  <div className="flex justify-between items-center text-xs mt-1">
-                    <div className="text-slate-500 dark:text-slate-400">
-                      Mkt Value:&nbsp;
-                      <span className="font-mono text-slate-900 dark:text-slate-100">
-                        ₹{formatNum(a.marketValue)}
-                      </span>
-                    </div>
-                    <div
-                      className={`font-mono ${
-                        a.pnl >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-red-700 dark:text-red-500'
-                      }`}
-                    >
-                      ₹{formatNum(a.pnl)} ({a.returnPct >= 0 ? '+' : ''}
-                      {formatNum(a.returnPct)}%)
-                    </div>
-                  </div>
-                )}
-                <div className="flex justify-end gap-3 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(a)}
-                    className="text-xs px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200"
-                    aria-label={`Edit ${a.symbol}`}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startDelete(a)}
-                    className="text-xs px-3 py-1 rounded-md bg-red-600 text-white"
-                    aria-label={`Delete ${a.symbol}`}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
+        </div>
       </div>
 
-      {/* Responsive Table Container (desktop / tablet) */}
-      <div className="overflow-x-auto rounded-xl border dark:border-gray-700 shadow-lg hidden md:block">
-        <table aria-label="Assets table" className="w-full min-w-[850px] text-sm bg-white dark:bg-slate-900">
-          <thead className="bg-gray-50 dark:bg-slate-800 text-xs font-medium uppercase text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 ">
-            <tr>
-              <Th label="Symbol" sortKey="symbol" sort={sort} onSort={onSort} />
-              <Th label="Name" sortKey="name" sort={sort} onSort={onSort} />
-              <Th label="Qty" sortKey="quantity" sort={sort} onSort={onSort} align="right" />
-              <Th label="Avg Buy" sortKey="avg_buy_price" sort={sort} onSort={onSort} align="right" />
-
-              {hasPriceData && (
-                <>
-                  <Th label="Last" sortKey="lastPriceINR" sort={sort} onSort={onSort} align="right" />
-                  <Th label="Mkt Value" sortKey="marketValue" sort={sort} onSort={onSort} align="right" />
-                  <Th label="P&L" sortKey="pnl" sort={sort} onSort={onSort} align="right" />
-                  <Th label="%" sortKey="returnPct" sort={sort} onSort={onSort} align="right" />
-                </>
-              )}
-
-              {/* Sticky Actions Column – ALWAYS VISIBLE */}
-              <th className="sticky right-0 bg-gray-50 dark:bg-slate-800 px-6 py-3 text-center font-medium">
-                Actions
-              </th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {view.length === 0 ? (
-              <tr className="bg-white dark:bg-slate-900">
-                <td colSpan={hasPriceData ? 9 : 5} className="p-0">
-                  <EmptyState
-                    preset="noAssets"
-                    size="md"
-                    actionLabel="Add your first asset"
-                    onAction={() => window.location.hash = '#add-asset'}
-                    className="rounded-none border-0"
-                  />
-                </td>
-              </tr>
-            ) : (
-              view.map((a) => (
-                <tr
-                  key={a.id}
-                  data-symbol={a.symbol}
-                  className={`transition-all duration-200 ${
-                    (hoveredSymbol === a.symbol || selectedSymbol === a.symbol) ? 'bg-slate-100 dark:bg-slate-800/50 ring-1 ring-slate-300 dark:ring-slate-700' : ''
-                  } hover:bg-gray-50 dark:hover:bg-slate-800`}
-                >
-                  <td
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setEditing(a)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setEditing(a); }}
-                    aria-label={`Edit ${a.symbol}`}
-                    className="py-4 px-4 font-semibold cursor-pointer hover:underline"
-                  >
-                    {a.symbol}
-                  </td>
-                  <td className="py-4 px-4 text-gray-600 dark:text-gray-300 max-w-xs truncate">{a.name}</td>
-                  <td className="py-4 px-4 text-right font-mono">{formatNum(a.quantity)}</td>
-                  <td className="py-4 px-4 text-right font-mono">₹{formatNum(a.avg_buy_price ?? a.avgBuyPrice)}</td>
-
-                  {hasPriceData && (
-                    <>
-                      <td className="py-4 px-4 text-right text-gray-600 font-mono">₹{formatNum(a.lastPriceINR)}</td>
-                      <td className="py-4 px-4 text-right font-semibold font-mono">₹{formatNum(a.marketValue)}</td>
-                      <td className={`py-4 px-4 text-right font-semibold font-mono ${a.pnl >= 0 ? "text-emerald-700 dark:text-emerald-500" : "text-red-700 dark:text-red-500"}`}>
-                        ₹{formatNum(a.pnl)}
-                      </td>
-                      <td className={`py-4 px-4 text-right font-semibold font-mono ${a.returnPct >= 0 ? "text-emerald-700 dark:text-emerald-500" : "text-red-700 dark:text-red-500"}`}>
-                        {a.returnPct >= 0 ? "+" : ""}{formatNum(a.returnPct)}%
-                      </td>
-                    </>
-                  )}
-
-                  {/* Sticky Actions – Never Hidden */}
-                  <td className="sticky right-0 bg-white dark:bg-slate-900 py-4 px-6 text-center border-l dark:border-gray-700">
-                    <button type="button" onClick={() => setEditing(a)} aria-label={`Edit ${a.symbol}`} className="text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium mr-4 transition-colors">Edit</button>
-                    <button type="button" onClick={() => startDelete(a)} aria-label={`Delete ${a.symbol}`} className="text-red-700 dark:text-red-500 hover:text-red-900 dark:hover:text-red-400 font-medium transition-colors">Delete</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-
-          {/* Total Row – Always Visible */}
-          <tfoot>
-            <tr className="bg-slate-100 dark:bg-slate-800/50 font-semibold text-lg">
-              <td colSpan={hasPriceData ? 5 : 3} className="py-4 px-6 text-left text-slate-800 dark:text-slate-200">
-                Total Portfolio Value
-              </td>
-              <td colSpan={hasPriceData ? 3 : 1} className="py-4 px-6 text-right text-slate-900 dark:text-white font-mono">
-                ₹{formatNum(totalMarketValue)}
-              </td>
-              {/* Sticky empty cell to match Actions column */}
-              <td className="sticky right-0 bg-slate-100 dark:bg-slate-800/50 border-l dark:border-gray-700"></td>
-            </tr>
-          </tfoot>
-        </table>
+      <div className="w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-950/40">
+        <Table className="min-w-[980px]">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[250px] px-5 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                <button type="button" onClick={() => handleSort('name')} className="flex items-center gap-1 font-semibold text-slate-700 transition-colors hover:text-slate-900 dark:text-slate-200 dark:hover:text-white">
+                  Asset {renderSortIcon('name')}
+                </button>
+              </TableHead>
+              <TableHead className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                <button type="button" onClick={() => handleSort('quantity')} className="ml-auto flex items-center justify-end gap-1 font-semibold text-slate-700 transition-colors hover:text-slate-900 dark:text-slate-200 dark:hover:text-white">
+                  Quantity {renderSortIcon('quantity')}
+                </button>
+              </TableHead>
+              <TableHead className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                <button type="button" onClick={() => handleSort('avgBuyPrice')} className="ml-auto flex items-center justify-end gap-1 font-semibold text-slate-700 transition-colors hover:text-slate-900 dark:text-slate-200 dark:hover:text-white">
+                  Avg. Buy Price {renderSortIcon('avgBuyPrice')}
+                </button>
+              </TableHead>
+              <TableHead className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                <button type="button" onClick={() => handleSort('lastPriceINR')} className="ml-auto flex items-center justify-end gap-1 font-semibold text-slate-700 transition-colors hover:text-slate-900 dark:text-slate-200 dark:hover:text-white">
+                  Last Price {renderSortIcon('lastPriceINR')}
+                </button>
+              </TableHead>
+              <TableHead className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                <button type="button" onClick={() => handleSort('marketValue')} className="ml-auto flex items-center justify-end gap-1 font-semibold text-slate-700 transition-colors hover:text-slate-900 dark:text-slate-200 dark:hover:text-white">
+                  Market Value {renderSortIcon('marketValue')}
+                </button>
+              </TableHead>
+              <TableHead className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                <button type="button" onClick={() => handleSort('pnl')} className="ml-auto flex items-center justify-end gap-1 font-semibold text-slate-700 transition-colors hover:text-slate-900 dark:text-slate-200 dark:hover:text-white">
+                  Total P&L {renderSortIcon('pnl')}
+                </button>
+              </TableHead>
+              <TableHead className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                <button type="button" onClick={() => handleSort('returnPct')} className="ml-auto flex items-center justify-end gap-1 font-semibold text-slate-700 transition-colors hover:text-slate-900 dark:text-slate-200 dark:hover:text-white">
+                  Total Return {renderSortIcon('returnPct')}
+                </button>
+              </TableHead>
+              <TableHead className="w-[130px] px-5 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAssets.map((asset, index) => (
+              <TableRow key={asset.id} className={`transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-900/70 ${index % 2 === 1 ? 'bg-slate-50/40 dark:bg-slate-900/20' : 'bg-white dark:bg-transparent'}`}>
+                <TableCell className="px-5 py-3">
+                  <div className="font-medium text-slate-800 dark:text-slate-100">{asset.name}</div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">{asset.symbol}</span>
+                    <Badge variant="outline" className="rounded-full border-slate-200 text-xs capitalize text-slate-600 dark:border-slate-700 dark:text-slate-300">{asset.type.replace('_', ' ')}</Badge>
+                  </div>
+                </TableCell>
+                <TableCell className="px-5 py-3 text-right font-mono text-slate-700 dark:text-slate-200">{asset.quantity}</TableCell>
+                <TableCell className="px-5 py-3 text-right font-mono text-slate-700 dark:text-slate-200">{formatCurrency(asset.avgBuyPrice)}</TableCell>
+                <TableCell className="px-5 py-3 text-right font-mono text-slate-700 dark:text-slate-200">{formatCurrency(asset.lastPriceINR)}</TableCell>
+                <TableCell className="px-5 py-3 text-right font-semibold font-mono text-slate-800 dark:text-slate-100">{formatCurrency(asset.marketValue)}</TableCell>
+                <TableCell className={`px-5 py-3 text-right font-semibold font-mono ${asset.pnl >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
+                  {formatCurrency(asset.pnl)}
+                </TableCell>
+                <TableCell className={`px-5 py-3 text-right font-semibold font-mono ${asset.returnPct >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
+                  <div className="flex items-center justify-end gap-1">{asset.returnPct >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}{formatPercent(asset.returnPct)}</div>
+                </TableCell>
+                <TableCell className="px-5 py-3 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button type="button" className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                      Edit
+                    </button>
+                    <button type="button" className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50">
+                      Delete
+                    </button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            <TableRow className="sticky bottom-0 z-20 border-t border-slate-300 bg-slate-900 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-800">
+              <TableCell className="px-5 py-3 font-semibold">Total</TableCell>
+              <TableCell className="px-5 py-3 text-right font-mono font-semibold">{totals.totalQuantity}</TableCell>
+              <TableCell className="px-5 py-3 text-right font-mono font-semibold">{formatCurrency(totals.avgBuyPrice)}</TableCell>
+              <TableCell className="px-5 py-3 text-right font-mono font-semibold">—</TableCell>
+              <TableCell className="px-5 py-3 text-right font-mono font-semibold">{formatCurrency(totals.totalMarketValue)}</TableCell>
+              <TableCell className={`px-5 py-3 text-right font-mono font-semibold ${totals.totalPnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                {formatCurrency(totals.totalPnl)}
+              </TableCell>
+              <TableCell className={`px-5 py-3 text-right font-mono font-semibold ${totals.totalReturnPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                {formatPercent(totals.totalReturnPct)}
+              </TableCell>
+              <TableCell className="px-5 py-3" />
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
-
-      {/* Edit Modal */}
-      {editing && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full">
-            <div className="flex justify-between items-center mb-4 p-6 pb-0">
-              <h3 className="text-xl font-bold">Edit {editing.symbol}</h3>
-              <button type="button" onClick={() => setEditing(null)} aria-label="Close edit dialog" className="text-2xl text-gray-500">×</button>
-            </div>
-            <div className="p-6 pt-2 overflow-x-auto">
-              <AssetForm
-                token={token}
-                editing={{
-                  id: editing.id, 
-                  type: editing.type,
-                  symbol: editing.symbol,
-                  name: editing.name,
-                  quantity: editing.quantity,
-                  avgBuyPrice: editing.avg_buy_price ?? editing.avgBuyPrice ?? 0,
-                }}
-                onSaved={() => {
-                  setEditing(null);
-                  onChange?.();
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleting && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 text-center">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-              <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">Delete Asset</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Are you sure you want to delete <strong>{deleting.symbol}</strong>? This action cannot be undone.
-            </p>
-
-            {deleting.error && (
-              <div className="text-red-500 bg-red-100 dark:bg-red-900/50 p-3 rounded-lg mb-4 text-sm">
-                {deleting.error}
-              </div>
-            )}
-
-            <div className="flex justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => setDeleting(null)}
-                disabled={deleting.loading}
-                className="px-6 py-2.5 rounded-lg border dark:border-slate-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => onDelete(deleting.id)}
-                disabled={deleting.loading}
-                className="px-6 py-2.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 disabled:bg-red-400 flex items-center gap-2"
-              >
-                {deleting.loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" /> Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
-}
-
-/* Safe Sort Header */
-function Th({ label, sortKey, sort, onSort, align = "left" }) {
-  const isSorted = sort?.key === sortKey;
-
-  return (
-    <th
-      onClick={() => onSort(sortKey)}
-      className={`px-6 py-3 text-${align} font-medium cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-slate-700 whitespace-nowrap`}
-    >
-      <div className={`flex items-center gap-2 ${align === 'right' ? 'justify-end' : 'justify-start'}`}>
-        {label}
-        {isSorted && (
-          sort.dir === "asc" 
-            ? <ArrowUp className="w-3 h-3" /> 
-            : <ArrowDown className="w-3 h-3" />
-        )}
-      </div>
-    </th>
-  );
-}
-
-/*utils*/
-function matchFilter(a, f) {
-  const q = (f || "").trim().toUpperCase();
-  if (!q) return true;
-  return (
-    (a.symbol || "").toUpperCase().includes(q) ||
-    (a.name || "").toUpperCase().includes(q)
-  );
-}
-
-function compare(a, b, key, dir) {
-  const va = normalize(a, key);
-  const vb = normalize(b, key);
-  if (va < vb) return dir === "asc" ? -1 : 1;
-  if (va > vb) return dir === "asc" ? 1 : -1;
-  return 0;
-}
-
-function normalize(obj, key) {
-  if (key === "avg_buy_price") {
-    return Number(obj.avg_buy_price ?? obj.avgBuyPrice ?? 0);
-  }
-  const val = obj[key];
-  return typeof val === "string" ? val.toUpperCase() : Number(val ?? 0);
-}
-
-function formatNum(n) {
-  if (n == null) return "0.00";
-  return Number(n).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 }

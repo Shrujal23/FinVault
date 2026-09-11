@@ -1,193 +1,98 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { LogIn, ShieldCheck } from 'lucide-react';
+import { useAuth } from './hooks/useAuth';
+
+// Layout & Fallback
 import Navbar from './components/Navbar.jsx';
-import AuthPage from './pages/Auth.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import AboutUs from './components/AboutUs.jsx';
-import DividendMonitor from './pages/DividendMonitor.jsx';
-import Billing from './pages/Billing.jsx';
-import ContactPage from './pages/ContactPage.jsx';
-import SettingsPage from './pages/SettingsPage.jsx';
 import Footer from './components/Footer.jsx';
+import SuspenseFallback from './components/SuspenseFallback.jsx';
+
+// Page Components
+import AuthPage from './pages/Auth.jsx';
 import ResetPasswordForm from './components/ResetPasswordForm.jsx';
 
-export default function App() {
-  const [token, setTokenState] = useState(() => {
-    return localStorage.getItem('token') || sessionStorage.getItem('token') || '';
-  });
+// Lazy-load pages that require authentication or are not on the main landing path
+const Dashboard = React.lazy(() => import('./pages/Dashboard.jsx'));
+const AboutUs = React.lazy(() => import('./components/AboutUs.jsx'));
+const DividendMonitor = React.lazy(() => import('./pages/DividendMonitor.jsx'));
+const Billing = React.lazy(() => import('./pages/Billing.jsx'));
+const ContactPage = React.lazy(() => import('./pages/ContactPage.jsx'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage.jsx'));
 
-  const [user, setUserState] = useState(() => {
-    const saved = localStorage.getItem('user') || sessionStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
+function AuthRequiredNotice() {
+  const navigate = useNavigate();
 
-  const [currentPage, setCurrentPage] = useState(() => {
-    const path = window.location.pathname || '';
-    if (path === '/' || path === '') return 'home';
-    // map known paths to pages
-    const p = path.replace(/^\//, '');
-    // treat '/login' and '/register' as settings/auth entry
-    if (p === 'login' || p === 'register' || p === 'auth') return 'settings';
-    return p;
-  });
-  const logoutTimer = useRef(null);
-
-  const parseJwt = (tkn) => {
-    try {
-      const base64Url = tkn.split('.')[1];
-      if (!base64Url) return null;
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
-      );
-      return JSON.parse(jsonPayload);
-    } catch (e) {
-      return null;
-    }
-  };
-
-  const setUser = (value, remember = false) => {
-    setUserState(value || null);
-
-    if (value) {
-      const serialized = JSON.stringify(value);
-      if (remember) {
-        localStorage.setItem('user', serialized);
-        sessionStorage.removeItem('user');
-      } else {
-        sessionStorage.setItem('user', serialized);
-        localStorage.removeItem('user');
-      }
-    } else {
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('user');
-    }
-  };
-
-  const setToken = (value, remember = false) => {
-    setTokenState(value || '');
-
-    if (logoutTimer.current) {
-      clearTimeout(logoutTimer.current);
-      logoutTimer.current = null;
-    }
-
-    if (value) {
-      if (remember) {
-        localStorage.setItem('token', value);
-        sessionStorage.removeItem('token');
-      } else {
-        sessionStorage.setItem('token', value);
-        localStorage.removeItem('token');
-      }
-
-      const payload = parseJwt(value);
-      if (payload?.exp) {
-        const delay = (payload.exp * 1000) - Date.now();
-        if (delay > 0) {
-          logoutTimer.current = setTimeout(() => {
-            setToken('', false);
-            setUser(null, false);
-            setCurrentPage('home');
-          }, delay);
-        }
-      }
-    } else {
-      localStorage.removeItem('token');
-      sessionStorage.removeItem('token');
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('user');
-    }
-  };
-
-  const logout = () => {
-    setToken('', false);
-    setUser(null, false);
-    setCurrentPage('home');
-  };
-
-  const auth = {
-    token,
-    user,
-    setToken,
-    setUser,
-    logout,
-  };
-
-  // Navigation helper: updates state and browser URL
-  const navigate = (page) => {
-    setCurrentPage(page);
-    try {
-      const url = page === 'home' ? '/' : `/${page}`;
-      window.history.pushState({}, '', url);
-    } catch (e) {
-      // ignore (e.g., during SSR or unusual env)
-    }
-  };
-
-  // Handle browser back/forward
   useEffect(() => {
-    const onPop = () => {
-      const path = window.location.pathname || '';
-      const p = path === '/' ? 'home' : path.replace(/^\//, '');
-      if (p === 'login' || p === 'register' || p === 'auth') setCurrentPage('settings');
-      else setCurrentPage(p || 'home');
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
+    const redirectTimer = window.setTimeout(() => navigate('/auth', { replace: true }), 1600);
+    return () => window.clearTimeout(redirectTimer);
+  }, [navigate]);
 
-  // Main Page Renderer
-  const renderPage = () => {
-    const path = window.location.pathname || '';
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center px-4">
+      <div role="status" className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-lg dark:border-slate-800 dark:bg-slate-900">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300">
+          <ShieldCheck className="h-6 w-6" />
+        </div>
+        <h1 className="mt-4 text-xl font-semibold text-slate-900 dark:text-white">Sign in to continue</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+          Your portfolio dashboard is private. We’ll take you to the login page now.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/auth', { replace: true })}
+          className="mt-5 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:from-cyan-500 hover:to-blue-500"
+        >
+          <LogIn className="h-4 w-4" />
+          Go to login
+        </button>
+      </div>
+    </div>
+  );
+}
 
-    // Reset Password Route
-    if (path.startsWith('/reset-password/')) {
-      const resetToken = path.replace('/reset-password/', '');
-      return <ResetPasswordForm token={resetToken} onDone={() => setCurrentPage('home')} />;
-    }
+// A wrapper for authenticated routes to keep them secure
+function PrivateRoute({ children }) {
+  const { token } = useAuth();
+  return token ? children : <AuthRequiredNotice />;
+}
 
-    switch (currentPage) {
-      case 'home':
-      case 'dashboard':
-        return <Dashboard auth={auth} setCurrentPage={navigate} />;
+// A small wrapper to adapt the ResetPasswordForm component to the router
+function ResetPasswordRoute() {
+  const { token } = useParams();
+  // In a router-based app, we can just navigate on success.
+  // For now, we'll provide a no-op to satisfy the component's prop requirement.
+  return <ResetPasswordForm token={token} onDone={() => {}} />;
+}
 
-      case 'about':
-        return <AboutUs setCurrentPage={navigate} />;
-
-      case 'dividends':
-        return <DividendMonitor auth={auth} />;
-
-      case 'billing':
-        return <Billing auth={auth} setCurrentPage={navigate} />;
-
-      case 'contact':
-        return <ContactPage setCurrentPage={navigate} />;
-
-      case 'settings':
-        return token ? (
-          <SettingsPage auth={auth} setCurrentPage={navigate} />
-        ) : (
-          <AuthPage auth={auth} />
-        );
-
-      default:
-        return <Dashboard auth={auth} setCurrentPage={navigate} />;
-    }
-  };
+export default function App() {
+  const { token } = useAuth();
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <Navbar 
-        auth={auth} 
-        setCurrentPage={navigate} 
-        currentPage={currentPage} 
-      />
-      <main className="flex-grow w-full">
-        <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 md:px-6 lg:px-8 py-6">
-          {renderPage()}
-        </div>
-      </main>
-      <Footer setCurrentPage={setCurrentPage} />
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Navbar />
+        <main className="flex-grow w-full">
+          <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 md:px-6 lg:px-8 py-6">
+            <Suspense fallback={<SuspenseFallback />}>
+              <Routes>
+                <Route path="/auth" element={token ? <Navigate to="/" replace /> : <AuthPage />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/reset-password/:token" element={<ResetPasswordRoute />} />
+
+                <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+                <Route path="/dividends" element={<PrivateRoute><DividendMonitor /></PrivateRoute>} />
+                <Route path="/billing" element={<PrivateRoute><Billing /></PrivateRoute>} />
+                <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </div>
+        </main>
+        <Footer />
+      </BrowserRouter>
     </div>
   );
 }

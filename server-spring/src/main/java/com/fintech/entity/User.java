@@ -13,10 +13,10 @@ import java.util.List;
 
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
-@Table(
-        name = "users",
+@Table(name = "users",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = "email")
+        @UniqueConstraint(columnNames = "email"),
+        @UniqueConstraint(columnNames = "name")
         }
 )
 public class User {
@@ -34,6 +34,7 @@ public class User {
     @JsonIgnore
     @Column(nullable = false)
     private String passwordHash;
+
 
     @Column(name = "name")
     private String name;

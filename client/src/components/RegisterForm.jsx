@@ -4,6 +4,7 @@ import { apiRequest } from '../api/client.js';
 import StatusMessage from './StatusMessage.jsx';
 import { FcGoogle } from 'react-icons/fc';
 import { PASSWORD_STRENGTH_CONFIG, getPasswordChecks } from '../constants.js';
+import useAuthRateLimit from '../hooks/useAuthRateLimit.js';
 
 
 const PasswordField = ({
@@ -84,6 +85,7 @@ export default function RegisterForm({ auth }) {
     const [showConfirm, setShowConfirm] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [modalContent, setModalContent] = useState(null); // 'terms' | 'privacy' | null
+    const { isLocked, remainingSeconds, recordFailedAttempt, lockFor, resetAttempts } = useAuthRateLimit('register');
 
     const handleChange = useCallback((e) => {
         const { name, value } = e.target;
@@ -131,6 +133,11 @@ export default function RegisterForm({ auth }) {
         e.preventDefault();
         setError('');
 
+        if (isLocked) {
+        setError(`Too many attempts. Please try again in ${remainingSeconds} seconds.`);
+        return;
+        }
+
         if (!validateEmail(formData.email)) {
         setError('Please enter a valid email address');
         return;
@@ -159,15 +166,22 @@ export default function RegisterForm({ auth }) {
             });
 
             auth.setToken(data.token, true);
-            auth.setUser(data.user);
+            auth.setUser(data.user, true);
+            resetAttempts();
             
             
         } catch (err) {
-            setError(err.message || 'Failed to create account. This email may already be registered.');
+            if (err.status === 429) {
+                lockFor(err.retryAfterSeconds);
+                setError(`Too many attempts. Please try again in ${err.retryAfterSeconds} seconds.`);
+            } else {
+                recordFailedAttempt();
+                setError(err.message || 'Failed to create account. This email may already be registered.');
+            }
         } finally {
             setLoading(false);
         }
-    }, [formData, passwordsMatch, acceptedTerms, auth]);
+    }, [formData, passwordsMatch, acceptedTerms, auth, isLocked, remainingSeconds, recordFailedAttempt, lockFor, resetAttempts]);
 
     return (
         <form onSubmit={handleSubmit} className="space-y-7">
@@ -282,7 +296,7 @@ export default function RegisterForm({ auth }) {
             {/* Submit Button */}
             <button
                 type="submit"
-                disabled={loading || !formData.email || !formData.password || !passwordsMatch || !acceptedTerms}
+                disabled={loading || isLocked || !formData.email || !formData.password || !passwordsMatch || !acceptedTerms}
                 className="w-full py-3.5 rounded-2xl text-white font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm transition-all duration-200 flex items-center justify-center gap-3"
             >
                 {loading ? (
@@ -290,6 +304,8 @@ export default function RegisterForm({ auth }) {
                         <Loader2 className="w-5 h-5 animate-spin" />
                         Building your vault...
                     </>
+                ) : isLocked ? (
+                    `Try again in ${remainingSeconds}s`
                 ) : (
                     'Create My FinVault Account'
                 )}

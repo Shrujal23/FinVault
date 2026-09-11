@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Check, ShieldCheck, ArrowLeft, Settings, Sparkles, Receipt, Loader2 } from 'lucide-react';
+import { apiRequest } from '../api/client.js';
+import { useAuth } from '../hooks/useAuth';
+import useAppNavigate from '../hooks/useAppNavigate';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
-
-export default function Billing({ auth, setCurrentPage }) {
-  const { token } = auth || {};
+export default function Billing() {
+  const auth = useAuth();
+  const { token } = auth;
+  const setCurrentPage = useAppNavigate();
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [billingCycle, setBillingCycle] = useState('monthly');
 

@@ -2,6 +2,7 @@ import { useState, useCallback, memo } from 'react';
 import { apiRequest } from '../api/client.js';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import StatusMessage from './StatusMessage.jsx';
+import useAuthRateLimit from '../hooks/useAuthRateLimit.js';
 
 export default function LoginForm({ auth, onSwitchToForgot }) {
     const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ export default function LoginForm({ auth, onSwitchToForgot }) {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [remember, setRemember] = useState(false);
+    const { isLocked, remainingSeconds, recordFailedAttempt, lockFor, resetAttempts } = useAuthRateLimit('login');
 
     const handleChange = useCallback((e) => {
         const { name, value } = e.target;
@@ -25,6 +27,10 @@ export default function LoginForm({ auth, onSwitchToForgot }) {
     const handleSubmit = useCallback(async (e) => {
         e.preventDefault();
         setError('');
+        if (isLocked) {
+            setError(`Too many attempts. Please try again in ${remainingSeconds} seconds.`);
+            return;
+        }
         setLoading(true);
 
         try {
@@ -37,13 +43,20 @@ export default function LoginForm({ auth, onSwitchToForgot }) {
             });
 
             auth.setToken(response.token, remember);
-            auth.setUser(response.user);
+            auth.setUser(response.user, remember);
+            resetAttempts();
         } catch (err) {
-            setError(err.message || "We couldn't find a match for that email and password.");
+            if (err.status === 429) {
+                lockFor(err.retryAfterSeconds);
+                setError(`Too many attempts. Please try again in ${err.retryAfterSeconds} seconds.`);
+            } else {
+                recordFailedAttempt();
+                setError(err.message || "We couldn't find a match for that email and password.");
+            }
         } finally {
             setLoading(false);
         }
-    }, [formData, remember, auth]);
+    }, [formData, remember, auth, isLocked, remainingSeconds, recordFailedAttempt, lockFor, resetAttempts]);
 
     return (
         <form onSubmit={handleSubmit} className="space-y-7">
@@ -134,7 +147,7 @@ export default function LoginForm({ auth, onSwitchToForgot }) {
             {/* Submit Button */}
             <button
                 type="submit"
-                disabled={loading || !formData.email.trim() || !formData.password} // Ensure email is trimmed for validation
+                disabled={loading || isLocked || !formData.email.trim() || !formData.password} // Ensure email is trimmed for validation
                 className="w-full py-3.5 rounded-2xl text-white font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm transition-all duration-200 flex items-center justify-center gap-3"
             >
                 {loading ? (
@@ -142,6 +155,8 @@ export default function LoginForm({ auth, onSwitchToForgot }) {
                         <Loader2 className="w-5 h-5 animate-spin" />
                         Unlocking vault...
                     </>
+                ) : isLocked ? (
+                    `Try again in ${remainingSeconds}s`
                 ) : (
                     'Sign into FinVault'
                 )}

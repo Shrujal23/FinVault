@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "watchlist", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"user_id", "symbol"})
+    @UniqueConstraint(columnNames = {"user_id", "symbol"})
 })
 public class Watchlist {
 
@@ -26,14 +26,14 @@ public class Watchlist {
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Asset.AssetType type; // stock, mutual, crypto
+    private Asset.AssetType type; // stock, crypto are the only one working with API as of now. others need manul adding
 
     @NotBlank
-    @Column(nullable = false)
+    @Column(nullable = false, length = 32)
     private String symbol;
 
     @NotBlank
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String name;
 
     @CreationTimestamp

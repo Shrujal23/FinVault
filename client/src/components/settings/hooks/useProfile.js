@@ -23,22 +23,16 @@ export default function useProfile(auth) {
     );
   }, [auth?.user]);
 
+  const remember = !!localStorage.getItem('token');
+
   const saveProfile = useCallback(async () => {
     const name = displayName.trim();
 
     setUploading(true);
 
     try {
-      const updatedUser = {
-        ...auth.user,
-        name: name || auth.user.name,
-        avatarUrl: preview,
-      };
-
-      auth.setUser(updatedUser);
-
       if (auth?.token) {
-        await apiRequest("/api/user/profile", {
+        const res = await apiRequest("/api/user/profile", {
           method: "PUT",
           body: {
             name,
@@ -46,35 +40,55 @@ export default function useProfile(auth) {
           },
           token: auth.token,
         });
+
+        const updatedUser = res?.user || {
+          ...auth.user,
+          name: name || auth.user.name,
+          avatarUrl: preview,
+        };
+
+        auth.setUser(updatedUser, remember);
+        if (res?.token) {
+          auth.setToken(res.token, remember);
+        }
+      } else {
+        auth.setUser({
+          ...auth.user,
+          name: name || auth.user.name,
+          avatarUrl: preview,
+        }, remember);
       }
     } catch (err) {
       console.error("Failed to update profile", err);
+      throw err;
     } finally {
       setUploading(false);
     }
-  }, [displayName, preview, auth]);
+  }, [displayName, preview, auth, remember]);
 
   const removePhoto = useCallback(async () => {
     const originalUser = auth.user;
     const originalPreview = preview;
 
     setPreview('');
-    auth.setUser({ ...auth.user, avatarUrl: '' });
+    auth.setUser({ ...auth.user, avatarUrl: '' }, remember);
 
     if (auth?.token) {
       try {
-        await apiRequest('/api/user/profile', {
+        const res = await apiRequest('/api/user/profile', {
           method: 'PUT',
           body: { avatarBase64: '' },
           token: auth.token,
         });
+        if (res?.user) auth.setUser(res.user, remember);
+        if (res?.token) auth.setToken(res.token, remember);
       } catch (err) {
         console.error('Failed to remove photo', err);
-        auth.setUser(originalUser);
+        auth.setUser(originalUser, remember);
         setPreview(originalPreview);
       }
     }
-  }, [auth, preview]);
+  }, [auth, preview, remember]);
 
   return {
     preview,

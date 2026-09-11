@@ -8,15 +8,18 @@ export default function MarketNews() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [source, setSource] = useState('');
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
+    const fetchWithFallback = async () => {
       try {
         const res = await apiRequest('/api/news');
         if (!mounted) return;
+        setSource(res?.source || '');
         if (res?.error) {
           setError(res.error + (res?.details ? ` — ${res.details}` : ''));
+          setArticles(res.articles || []);
         } else if (res?.articles && res.articles.length > 0) {
           setArticles(res.articles);
         } else if (res?.debug && res.debug.rawLength === 0) {
@@ -25,12 +28,30 @@ export default function MarketNews() {
           setArticles([]);
         }
       } catch (e) {
-        if (!mounted) return;
-        setError(e.message || 'Failed to load news');
+        // Attempt a direct fetch to read server response body for more details
+        try {
+          const raw = await fetch('/api/news');
+          const body = await raw.json().catch(() => null);
+          if (!mounted) return;
+          if (raw.ok) {
+            setArticles(body?.articles || []);
+            setSource(body?.source || '');
+            if (body?.error) setError(body.error + (body?.details ? ` — ${body.details}` : ''));
+          } else {
+            const msg = body?.error || body?.message || `Server returned ${raw.status}`;
+            setError(msg + (body?.details ? ` — ${body.details}` : ''));
+            setArticles(body?.articles || []);
+          }
+        } catch (fetchErr) {
+          if (!mounted) return;
+          setError(e.message || fetchErr.message || 'Failed to load news');
+        }
       } finally {
         if (mounted) setLoading(false);
       }
-    })();
+    };
+
+    fetchWithFallback();
     return () => { mounted = false; };
   }, []);
 
@@ -50,9 +71,28 @@ export default function MarketNews() {
           variant="error"
           message={error}
           retryLabel="Retry"
-          onRetry={() => { setError(''); setLoading(true); window.location.reload(); }}
+          onRetry={() => { setError(''); setLoading(true); /* re-run fetch without reload */
+            (async () => {
+              try {
+                const res = await apiRequest('/api/news');
+                setError('');
+                setArticles(res?.articles || []);
+                setSource(res?.source || '');
+              } catch (e) {
+                // leave error text; the useEffect fallback will also re-run when loading toggles
+                setError(e.message || 'Failed to load news');
+              } finally {
+                setLoading(false);
+              }
+            })();
+          }}
           onDismiss={() => setError('')}
         />
+      )}
+      {!loading && !error && source === 'fallback' && (
+        <p className="mb-4 text-sm text-amber-700 dark:text-amber-300">
+          Live headlines are temporarily unavailable. Showing sample headlines.
+        </p>
       )}
       {!loading && !error && articles.length === 0 && (
         <EmptyState

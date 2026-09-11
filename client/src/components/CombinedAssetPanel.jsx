@@ -3,7 +3,7 @@ import AllocationPie from './AllocationPie.jsx';
 import AssetTable from './AssetTable.jsx';
 import { PieChart, Columns, List } from 'lucide-react';
 
-export default function CombinedAssetPanel({ rows = [], allocation = [], token, onChange, compact = false, selectedSymbol: selectedProp, onSelectSymbol, hoveredSymbol: hoveredProp, onHover }) {
+export default function CombinedAssetPanel({ assets = [], allocation = [], selectedSymbol: selectedProp, onSelectSymbol, hoveredSymbol: hoveredProp, onHover }) {
   const [view, setView] = useState('split'); // 'split' | 'chart' | 'table'
   const [internalHovered, setInternalHovered] = useState(null);
   const [internalSelected, setInternalSelected] = useState(null);
@@ -13,6 +13,11 @@ export default function CombinedAssetPanel({ rows = [], allocation = [], token, 
 
   const hoveredSymbol = hoveredProp !== undefined ? hoveredProp : internalHovered;
   const setHoveredSymbol = onHover ?? setInternalHovered;
+
+  // Filter assets if a symbol is selected from the pie chart
+  const filteredAssets = selectedSymbol
+    ? assets.filter(asset => asset.symbol === selectedSymbol)
+    : assets;
 
   return (
     <div className="w-full">
@@ -70,14 +75,7 @@ export default function CombinedAssetPanel({ rows = [], allocation = [], token, 
           <div className={`${view === 'split' ? 'lg:w-2/3 min-h-0' : 'w-full'}`}>
             {/* keep table area scrollable and constrained so the chart doesn't push layout */}
             <div className="min-h-0 h-[420px] lg:h-auto overflow-auto">
-              <AssetTable
-                rows={rows}
-                onChange={onChange}
-                token={token}
-                hoveredSymbol={hoveredSymbol}
-                selectedSymbol={selectedSymbol}
-                externalFilter={selectedSymbol || ''}
-              />
+              <AssetTable assets={filteredAssets} />
             </div>
           </div>
         )}

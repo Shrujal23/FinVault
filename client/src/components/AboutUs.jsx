@@ -1,4 +1,5 @@
 import { ArrowLeft, Shield, Activity, Users, Sparkles, Target, Mail } from 'lucide-react';
+import useAppNavigate from '../hooks/useAppNavigate';
 
 const pillars = [
   {
@@ -24,7 +25,8 @@ const stats = [
   { label: 'Core Focus', value: 'Privacy, Speed & Clean UI' },
 ];
 
-export default function AboutUs({ setCurrentPage }) {
+export default function AboutUs() {
+  const setCurrentPage = useAppNavigate();
   return (
     <div className="min-h-screen pb-12">
       {/* Hero Section */}

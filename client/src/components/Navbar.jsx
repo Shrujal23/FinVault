@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Menu,
   X,
@@ -14,14 +15,20 @@ import {
 } from "lucide-react";
 import { useTheme } from "../pages/ThemeContext";
 import DarkModeToggle from "./DarkModeToggle.jsx";
+import { useAuth } from "../hooks/useAuth";
+import useAppNavigate from "../hooks/useAppNavigate";
 
-export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
+export default function Navbar() {
+  const { token, user, logout } = useAuth();
+  const navigate = useNavigate();
+  const goTo = useAppNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const dropdownRef = useRef();
   const { theme } = useTheme();
 
-  const userName = auth.user?.name || auth.user?.email?.split("@")[0] || "User";
+  const userName = user?.name || user?.email?.split("@")[0] || "User";
   const userInitials = userName[0]?.toUpperCase();
 
   useEffect(() => {
@@ -35,24 +42,26 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
   }, []);
 
   const navItems = [
-    { id: "home", label: "Dashboard", icon: Home },
-    { id: "dividends", label: "Dividends", icon: CreditCard },
-    { id: "about", label: "About", icon: Info },
-    { id: "contact", label: "Contact Us", icon: Mail },
+    { path: "/", label: "Dashboard", icon: Home },
+    { path: "/dividends", label: "Dividends", icon: CreditCard },
+    { path: "/about", label: "About", icon: Info },
+    { path: "/contact", label: "Contact Us", icon: Mail },
   ];
 
   const goSettings = useCallback(() => {
-    setCurrentPage("settings");
+    goTo("settings");
     setShowUserDropdown(false);
     setMobileMenuOpen(false);
-  }, [setCurrentPage]);
+  }, [goTo]);
 
   const handleLogout = useCallback(() => {
-    auth.setToken("");
-    auth.setUser(null);
+    logout();
     setShowUserDropdown(false);
     setMobileMenuOpen(false);
-  }, [auth]);
+    navigate("/auth");
+  }, [logout, navigate]);
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <>
@@ -62,14 +71,14 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
             <div
               role="button"
               tabIndex={0}
-              onClick={() => setCurrentPage("home")}
+              onClick={() => navigate("/")}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  setCurrentPage("home");
+                  navigate("/");
                 }
               }}
-              className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 transition-all duration-300 select-none shrink-0 hover:drop-shadow-[0_1px_3px_rgba(7,188,255,0.3)] dark:hover:drop-shadow-[0_1px_4px_rgba(7,188,255,0.4)]"
+              className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 transition-all duration-300 select-none shrink-0"
             >
               FinVault
             </div>
@@ -78,14 +87,14 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
               <div className="flex items-center gap-0.5 sm:gap-1 bg-gray-100 dark:bg-slate-800 rounded-full p-1 shadow-inner">
                 {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = currentPage === item.id;
+                  const active = isActive(item.path);
                   return (
                     <button
                       type="button"
-                      key={item.id}
-                      onClick={() => setCurrentPage(item.id)}
+                      key={item.path}
+                      onClick={() => navigate(item.path)}
                       className={`flex items-center gap-2 xl:gap-2.5 px-3 xl:px-5 py-2 xl:py-2.5 rounded-full text-sm xl:text-base font-medium transition-all duration-200 ${
-                        isActive
+                        active
                           ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
                           : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-gray-200/60 dark:hover:bg-slate-700/60"
                       }`}
@@ -97,9 +106,9 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
                 })}
               </div>
 
-              {!auth.token && <DarkModeToggle />}
+              {!token && <DarkModeToggle />}
 
-              {auth.token && (
+              {token && (
                 <div className="flex items-center gap-2">
                   <div ref={dropdownRef} className="relative">
                     <button
@@ -115,7 +124,7 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
                     </button>
 
                     {showUserDropdown && (
-                      <div className="absolute right-0 mt-3 w-64 sm:w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden animate-in slide-in-from-top-2 duration-200 z-50">
+                      <div className="absolute right-0 mt-3 w-64 sm:w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden z-50">
                         <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-slate-800">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-xl shrink-0">
@@ -123,7 +132,7 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
                             </div>
                             <div className="min-w-0">
                               <p className="font-semibold text-gray-900 dark:text-white truncate">{userName}</p>
-                              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{auth.user?.email}</p>
+                              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                             </div>
                           </div>
                         </div>
@@ -168,20 +177,21 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
         </div>
 
         {mobileMenuOpen && (
-          <div className="lg:hidden fixed inset-x-0 top-[52px] sm:top-16 max-h-[calc(100dvh-3.5rem)] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-gray-200 dark:border-slate-800 z-50 shadow-xl animate-in slide-in-from-top-1 duration-300">
+          <div className="lg:hidden fixed inset-x-0 top-[52px] sm:top-16 max-h-[calc(100dvh-3.5rem)] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-gray-200 dark:border-slate-800 z-50 shadow-xl">
             <div className="px-4 py-6 space-y-3">
               {navItems.map((item) => {
                 const Icon = item.icon;
+                const active = isActive(item.path);
                 return (
                   <button
                     type="button"
-                    key={item.id}
+                    key={item.path}
                     onClick={() => {
-                      setCurrentPage(item.id);
+                      navigate(item.path);
                       setMobileMenuOpen(false);
                     }}
                     className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl font-medium transition-all ${
-                      currentPage === item.id
+                      active
                         ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg"
                         : "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-700"
                     }`}
@@ -192,7 +202,7 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
                 );
               })}
 
-              {!auth.token && (
+              {!token && (
                 <div className="flex items-center justify-between px-5 py-3.5 rounded-2xl bg-gray-100 dark:bg-slate-800">
                   <div className="flex items-center gap-3">
                     {theme === "dark" ? (
@@ -206,13 +216,13 @@ export default function Navbar({ auth, setCurrentPage, currentPage = "home" }) {
                 </div>
               )}
 
-              {auth.token && (
+              {token && (
                 <>
                   <button
                     type="button"
                     onClick={goSettings}
                     className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl font-medium transition-colors ${
-                      currentPage === "settings"
+                      isActive("/settings")
                         ? "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/30"
                         : "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-slate-700"
                     }`}

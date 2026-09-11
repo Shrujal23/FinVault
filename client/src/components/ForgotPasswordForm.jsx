@@ -8,6 +8,7 @@ export default function ForgotPasswordForm({ onSwitchToLogin }) {
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [devResetToken, setDevResetToken] = useState(null);
     const [loading, setLoading] = useState(false);
 
     async function onSubmit(e) {
@@ -32,14 +33,8 @@ export default function ForgotPasswordForm({ onSwitchToLogin }) {
 
             // If server returned resetToken (dev mode), show it so developer can click through
             if (data?.resetToken) {
-                setSuccess(
-                    `Reset link ready — click below or copy: ${data.resetToken}`
-                );
-                // attach token to local state so we can open it quickly
-                setTimeout(() => {
-                    // expose globally for quick testing in dev
-                    window.__last_reset_token = data.resetToken;
-                }, 0);
+                setSuccess(`Reset link ready. You can use the buttons below for quick testing.`);
+                setDevResetToken(data.resetToken);
             } else {
                 setSuccess(
                     method === 'email'
@@ -143,18 +138,18 @@ export default function ForgotPasswordForm({ onSwitchToLogin }) {
                         <p className="font-medium">Check your {method === 'email' ? 'inbox' : 'messages'}</p>
                         <p className="mt-1 break-words">{success}</p>
                         {/* If developer got a token returned, show an action */}
-                        {window.__last_reset_token && (
+                        {devResetToken && (
                             <div className="mt-3 flex gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => window.location.href = `/reset-password/${window.__last_reset_token}`}
+                                    onClick={() => window.location.href = `/reset-password/${devResetToken}`}
                                     className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
                                 >
                                     Open reset link
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => navigator.clipboard && navigator.clipboard.writeText(window.__last_reset_token)}
+                                    onClick={() => navigator.clipboard && navigator.clipboard.writeText(devResetToken)}
                                     className="px-3 py-1 rounded border border-slate-300 text-sm"
                                 >
                                     Copy token

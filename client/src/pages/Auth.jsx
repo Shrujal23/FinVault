@@ -3,8 +3,10 @@ import LoginForm from '../components/LoginForm.jsx';
 import RegisterForm from '../components/RegisterForm.jsx';
 import ForgotPasswordForm from '../components/ForgotPasswordForm.jsx';
 import { BarChart3, LogIn, UserPlus, TrendingUp, Briefcase, PieChart } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
-export default function AuthPage({ auth }) {
+export default function AuthPage() {
+    const auth = useAuth();
     const [mode, setMode] = useState('login');
     
     return (

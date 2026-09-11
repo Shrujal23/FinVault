@@ -1,255 +1,159 @@
 package com.fintech.controller;
 
-import com.fintech.dto.AssetDto;
-import com.fintech.entity.Asset;
-import com.fintech.entity.User;
-import com.fintech.entity.JwtUtils;
-import com.fintech.service.AssetService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fintech.dto.AssetDto;
+import com.fintech.entity.Asset;
+import com.fintech.entity.User;
+import com.fintech.exception.ResourceNotFoundException;
+import com.fintech.service.AssetService;
+import com.fintech.service.PortfolioService;
+import com.fintech.validation.RequestValidation;
 
 @RestController
 @RequestMapping("/api/assets")
-public class AssetController {
+public class AssetController extends BaseController {
 
     private static final Logger logger = LoggerFactory.getLogger(AssetController.class);
 
-    @Autowired
-    private AssetService assetService;
-
-    @Autowired
-    private JwtUtils jwtUtils;
-
+    private final AssetService assetService;
+    private final PortfolioService portfolioService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ---------------------- GET ALL ----------------------
+    public AssetController(AssetService assetService, PortfolioService portfolioService) {
+        this.assetService = assetService;
+        this.portfolioService = portfolioService;
+    }
 
     @GetMapping
-    public ResponseEntity<?> getAssets(
-            @RequestHeader(value = "Authorization", required = false) String token,
-            @RequestParam(value = "enrich", defaultValue = "false") boolean enrich
-    ) {
+    public ResponseEntity<?> getAssets(@RequestParam(value = "enrich", defaultValue = "false") boolean enrich) {
+        User user = requireAuthenticatedUser();
+        List<Asset> assets = assetService.getAssetsByUser(user);
 
-        Optional<User> userOpt = validateTokenAndGetUser(token);
-        if (userOpt.isEmpty()) return unauthorized("Invalid token for getAssets");
-
-        try {
-            User user = userOpt.get();
-            List<Asset> assets = assetService.getAssetsByUser(user);
-
-            if (!enrich) {
-                List<AssetDto> dtos = assets.stream().map(AssetDto::fromEntity).collect(Collectors.toList());
-                return ResponseEntity.ok(Map.of("assets", dtos));
-            }
-
-            return ResponseEntity.ok(enrichAssetsData(assets));
-
-        } catch (Exception e) {
-            logger.error("Error fetching assets: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Unable to fetch assets", "details", e.getMessage()));
+        if (!enrich) {
+            List<AssetDto> dtos = assets.stream().map(AssetDto::fromEntity).collect(Collectors.toList());
+            return ResponseEntity.ok(Map.of("assets", dtos));
         }
-    }
 
-    // ---------------------- CREATE ----------------------
+        Map<String, Object> summary = portfolioService.buildSummary(user);
+        return ResponseEntity.ok(Map.of(
+            "assets", summary.get("items"),
+            "totalMarketValue", summary.get("totalMarketValue")
+        ));
+    }
 
     @PostMapping
-    public ResponseEntity<?> createAsset(
-            @RequestHeader(value = "Authorization", required = false) String token,
-            @RequestBody Map<String, Object> req
-    ) {
+    public ResponseEntity<AssetDto> createAsset(@RequestBody Map<String, Object> req) {
+        User user = requireAuthenticatedUser();
+        Asset asset = new Asset();
+        asset.setUser(user);
+        populateAssetFromRequest(asset, req);
+        asset.setCreatedAt(LocalDateTime.now());
 
-        Optional<User> userOpt = validateTokenAndGetUser(token);
-        if (userOpt.isEmpty()) return unauthorized("Invalid token for createAsset");
-
-        try {
-            Asset asset = new Asset();
-            asset.setUser(userOpt.get());
-            
-            populateAssetFromRequest(asset, req);
-            asset.setCreatedAt(LocalDateTime.now());
-
-            Asset saved = assetService.saveAsset(asset);
-            return ResponseEntity.ok(AssetDto.fromEntity(saved));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-
-        } catch (Exception e) {
-            logger.error("Error creating asset: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Could not create asset", "details", e.getMessage()));
-        }
+        Asset saved = assetService.saveAsset(asset);
+        logger.info("Asset created for user {}: {}", user.getId(), saved.getSymbol());
+        return ResponseEntity.ok(AssetDto.fromEntity(saved));
     }
-
-    // ---------------------- UPDATE ----------------------
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateAsset(
-            @RequestHeader(value = "Authorization", required = false) String token,
+    public ResponseEntity<AssetDto> updateAsset(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> req
-    ) {
+            @RequestBody Map<String, Object> req) {
+        User user = requireAuthenticatedUser();
+        Asset asset = assetService.getAssetByIdAndUser(id, user)
+                .orElseThrow(() -> new ResourceNotFoundException("Asset not found"));
 
-        Optional<User> userOpt = validateTokenAndGetUser(token);
-        if (userOpt.isEmpty()) return unauthorized("Invalid token for updateAsset");
-
-        try {
-            User user = userOpt.get();
-            Asset asset = assetService.getAssetByIdAndUser(id, user)
-                    .orElseThrow(() -> new IllegalArgumentException("Asset not found or unauthorized"));
-
-            populateAssetFromRequest(asset, req);
-
-            Asset updated = assetService.saveAsset(asset);
-            return ResponseEntity.ok(AssetDto.fromEntity(updated));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-
-        } catch (Exception e) {
-            logger.error("Error updating asset: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Could not update asset", "details", e.getMessage()));
-        }
+        populateAssetFromRequest(asset, req);
+        Asset updated = assetService.saveAsset(asset);
+        return ResponseEntity.ok(AssetDto.fromEntity(updated));
     }
-
-    // ---------------------- DELETE ----------------------
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteAsset(
-            @RequestHeader(value = "Authorization", required = false) String token,
-            @PathVariable Long id
-    ) {
+    public ResponseEntity<Map<String, String>> deleteAsset(@PathVariable Long id) {
+        User user = requireAuthenticatedUser();
+        Asset asset = assetService.getAssetByIdAndUser(id, user)
+                .orElseThrow(() -> new ResourceNotFoundException("Asset not found"));
 
-        Optional<User> userOpt = validateTokenAndGetUser(token);
-        if (userOpt.isEmpty()) return unauthorized("Invalid token for deleteAsset");
-
-        try {
-            User user = userOpt.get();
-            Asset asset = assetService.getAssetByIdAndUser(id, user)
-                    .orElseThrow(() -> new IllegalArgumentException("Asset not found or unauthorized"));
-
-            assetService.deleteAsset(asset.getId());
-
-            return ResponseEntity.ok(Map.of("message", "Asset deleted"));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-
-        } catch (Exception e) {
-            logger.error("Error deleting asset: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Could not delete asset", "details", e.getMessage()));
-        }
-    }
-
-    // ---------------------- HELPERS ----------------------
-
-    private Optional<User> validateTokenAndGetUser(String token) {
-        if (token == null || token.isBlank()) {
-            return Optional.empty();
-        }
-        return jwtUtils.getUserFromToken(token);
-    }
-
-    private ResponseEntity<Map<String, String>> unauthorized(String message) {
-        return ResponseEntity.status(401).body(Map.of("error", "Unauthorized: " + message));
-    }
-
-    private Map<String, Object> enrichAssetsData(List<Asset> assets) {
-        List<String> stockSymbols = assets.stream()
-                .filter(a -> a.getType() != Asset.AssetType.crypto)
-                .map(a -> a.getSymbol().toUpperCase())
-                .distinct()
-                .collect(Collectors.toList());
-
-        List<String> cryptoSymbols = assets.stream()
-                .filter(a -> a.getType() == Asset.AssetType.crypto)
-                .map(Asset::getSymbol)
-                .distinct()
-                .collect(Collectors.toList());
-
-        Map<String, BigDecimal> stockPrices = assetService.getLivePrices(stockSymbols);
-        Map<String, BigDecimal> cryptoPrices = assetService.getCryptoPrices(cryptoSymbols);
-
-        List<Map<String, Object>> enriched = new ArrayList<>();
-        double total = 0.0;
-
-        for (Asset a : assets) {
-            Map<String, Object> m = new HashMap<>();
-            String sym = a.getSymbol() != null ? a.getSymbol() : "";
-            String symUp = sym.toUpperCase();
-
-            double live = 0.0;
-            if (a.getType() == Asset.AssetType.crypto) {
-                BigDecimal bd = cryptoPrices.get(symUp);
-                if (bd == null) bd = cryptoPrices.get(sym);
-                live = (bd != null) ? bd.doubleValue() : 0.0;
-            } else {
-                BigDecimal bd = stockPrices.get(symUp);
-                live = (bd != null) ? bd.doubleValue() : 0.0;
-            }
-
-            double marketValue = (a.getQuantity() != null) ? a.getQuantity().doubleValue() * live : 0.0;
-            total += marketValue;
-
-            double cost = (a.getQuantity() != null && a.getAvgBuyPrice() != null) ? a.getQuantity().doubleValue() * a.getAvgBuyPrice().doubleValue() : 0.0;
-            double pnl = marketValue - cost;
-            double returnPct = cost > 0 ? (pnl / cost) * 100 : 0.0;
-
-            m.put("id", a.getId());
-            m.put("type", a.getType());
-            m.put("name", a.getName());
-            m.put("symbol", a.getSymbol());
-            m.put("quantity", a.getQuantity());
-            m.put("avgBuyPrice", a.getAvgBuyPrice());
-            m.put("lastPriceINR", live);
-            m.put("marketValue", marketValue);
-            m.put("pnl", pnl);
-            m.put("returnPct", returnPct);
-
-            enriched.add(m);
-        }
-
-        return Map.of("assets", enriched, "totalMarketValue", total);
+        assetService.deleteAsset(asset.getId());
+        return ResponseEntity.ok(Map.of("message", "Asset deleted"));
     }
 
     private void populateAssetFromRequest(Asset asset, Map<String, Object> req) {
-        asset.setType(Asset.AssetType.valueOf(req.get("type").toString()));
-        asset.setSymbol(req.get("symbol").toString());
+        if (req == null || req.isEmpty()) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+
+        Object typeObj = req.get("type");
+        if (typeObj == null || typeObj.toString().isBlank()) {
+            throw new IllegalArgumentException("type is required");
+        }
+        try {
+            asset.setType(Asset.AssetType.valueOf(typeObj.toString().trim().toLowerCase()));
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid asset type");
+        }
+
+        asset.setSymbol(RequestValidation.symbol(req.get("symbol")));
 
         String providedName = getString(req, "name");
         if (providedName == null || providedName.isBlank()) {
             Map<String, Object> info = assetService.resolveSymbolDetails(asset.getSymbol());
             String resolved = (String) info.getOrDefault("name", null);
             asset.setName(resolved != null ? resolved : asset.getSymbol());
-            
+
             if (!req.containsKey("sector") || getString(req, "sector") == null) {
                 asset.setSector((String) info.getOrDefault("exchange", null));
             }
         } else {
-            asset.setName(providedName);
+            asset.setName(RequestValidation.requiredText(providedName, "name", 255));
         }
 
-        asset.setQuantity(new BigDecimal(req.get("quantity").toString()));
+        Object quantityObj = req.get("quantity");
+        if (quantityObj == null) {
+            throw new IllegalArgumentException("quantity is required");
+        }
+        BigDecimal quantity = new BigDecimal(quantityObj.toString());
+        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("quantity must be greater than zero");
+        }
+        asset.setQuantity(quantity);
 
         String avg1 = getString(req, "avgBuyPrice");
         String avg2 = getString(req, "avg_buy_price");
-        String finalAvg = (avg1 != null) ? avg1 : (avg2 != null ? avg2 : "0");
-        asset.setAvgBuyPrice(new BigDecimal(finalAvg));
+        String finalAvg = (avg1 != null) ? avg1 : (avg2 != null ? avg2 : null);
+        if (finalAvg == null || finalAvg.isBlank()) {
+            throw new IllegalArgumentException("avgBuyPrice is required");
+        }
+        BigDecimal avgBuyPrice = new BigDecimal(finalAvg);
+        if (avgBuyPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("avgBuyPrice cannot be negative");
+        }
+        asset.setAvgBuyPrice(avgBuyPrice);
 
-        if (req.containsKey("sector")) asset.setSector(String.valueOf(req.get("sector")));
+        if (req.containsKey("sector")) {
+            String sector = getString(req, "sector");
+            asset.setSector(sector != null && !sector.isBlank()
+                    ? RequestValidation.requiredText(sector, "sector", 100)
+                    : null);
+        }
         asset.setTags(parseTags(req.get("tags")));
     }
 
@@ -261,16 +165,18 @@ public class AssetController {
     }
 
     private String parseTags(Object raw) {
+        if (!(raw instanceof List<?> list)) {
+            return "[]";
+        }
+
         try {
-            if (raw instanceof List<?> list) {
-                List<String> tags = list.stream()
-                        .map(String::valueOf)
-                        .collect(Collectors.toList());
-
-                return objectMapper.writeValueAsString(tags);
-            }
-        } catch (Exception ignored) {}
-
+            List<String> tags = list.stream()
+                    .map(String::valueOf)
+                    .filter(t -> !t.isBlank())
+                    .collect(Collectors.toList());
+            return objectMapper.writeValueAsString(tags);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException ignored) {
+        }
         return "[]";
     }
 }

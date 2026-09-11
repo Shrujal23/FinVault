@@ -15,10 +15,10 @@ import java.time.LocalDateTime;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(
-        name = "assets",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"user_id", "symbol"})
-        }
+    name = "assets",
+    uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"user_id", "symbol"})
+    }
 )
 public class Asset {
 
@@ -26,7 +26,7 @@ public class Asset {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Prevent infinite recursion: Asset → User → Assets → ...
+    // Preventing infinite recursion: Asset → User → Assets → ...
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore
@@ -38,11 +38,11 @@ public class Asset {
     private AssetType type;
 
     @NotNull
-    @Column(nullable = false)
+    @Column(nullable = false, length = 32)
     private String symbol;
 
     @NotNull
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String name;
 
     @NotNull
@@ -63,6 +63,7 @@ public class Asset {
     private LocalDateTime updatedAt;
 
     // Can be null
+    @Column(length = 100)
     private String sector;
 
     // JSON stored as String

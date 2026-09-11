@@ -1,22 +1,25 @@
 package com.fintech;
 
+import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
+import org.springframework.lang.NonNull;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
+/*
+Per-IP fixed-window rate limiting for /api routes.
+Auth endpoints use a stricter limit; other API routes use a higher limit.
+*/
 
-/**
- * Per-IP fixed-window rate limiting for /api routes.
- * Auth endpoints use a stricter limit; other API routes use a higher limit.
- */
 @Component
 @Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -43,7 +46,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         if (!enabled) {
             return true;
         }

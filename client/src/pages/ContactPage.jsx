@@ -13,9 +13,11 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import StatusMessage from '../components/StatusMessage.jsx';
+import useAppNavigate from '../hooks/useAppNavigate';
 
 
-export default function ContactPage({ setCurrentPage }) {
+export default function ContactPage() {
+  const setCurrentPage = useAppNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',

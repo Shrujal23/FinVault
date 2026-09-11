@@ -9,12 +9,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/contact")
 public class ContactController {
 
     private static final Logger logger = LoggerFactory.getLogger(ContactController.class);
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
     @PostMapping
     public ResponseEntity<?> submitContact(@RequestBody Map<String, Object> request) {
@@ -25,6 +27,14 @@ public class ContactController {
 
         if (name.isBlank() || email.isBlank() || message.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Name, email, and message are required"));
+        }
+
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid email address"));
+        }
+
+        if (message.length() > 5000) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Message is too long"));
         }
 
         logger.info("Contact form submitted by {} ({}) about {}", name, email, topic.isBlank() ? "general" : topic);

@@ -115,31 +115,28 @@ export default function AssetForm({ token, onSaved, editing }) {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      <div className="bg-white/90 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-700 dark:to-blue-700 px-8 py-6">
-          <h2 className="text-3xl font-bold text-white flex items-center gap-4">
-            {assetTypeIcons[type] || <PlusCircle className="w-8 h-8" />}
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-white/90 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95">
+        <div className="border-b border-slate-200/70 bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-700 px-8 py-6 dark:border-slate-800">
+          <h2 className="flex items-center gap-3 text-2xl font-semibold text-white">
+            {assetTypeIcons[type] || <PlusCircle className="h-7 w-7" />}
             {editing ? 'Edit Asset' : 'Add New Asset'}
           </h2>
-          <p className="text-cyan-100 mt-2 text-lg">Enter details to track your investment</p>
+          <p className="mt-2 text-sm text-cyan-100">Capture your portfolio details with a clear, structured form.</p>
         </div>
 
-        {/* Form */}
         <div className="p-8">
-          <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <form onSubmit={onSubmit} className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
             {/* Asset Type */}
             <div className="xl:col-span-1">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-2">
-                <LayoutDashboard className="w-4 h-4" />
+              <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <LayoutDashboard className="h-4 w-4" />
                 Asset Type
               </label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 font-medium"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-medium text-slate-700 shadow-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               >
                 <option value="stock">📈 Stock</option>
                 <option value="mutual">🏦 Mutual Fund</option>
@@ -152,9 +149,9 @@ export default function AssetForm({ token, onSaved, editing }) {
 
             {/* Symbol */}
             <div className="xl:col-span-1">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-2">
-                <Hash className="w-4 h-4" />
-                Symbol {(type === 'stock' || type === 'crypto' || type === 'mutual') && <span className="text-slate-600 dark:text-slate-400 text-xs font-semibold">(Live Search)</span>}
+              <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <Hash className="h-4 w-4" />
+                Symbol {(type === 'stock' || type === 'crypto' || type === 'mutual') && <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">(Live Search)</span>}
               </label>
               {type === 'stock' || type === 'crypto' || type === 'mutual' ? (
                 <StockSearch
@@ -178,8 +175,7 @@ export default function AssetForm({ token, onSaved, editing }) {
                   type="text"
                   value={symbol}
                   onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                  className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                           focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 uppercase font-mono text-lg tracking-wider"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-mono uppercase tracking-wider text-slate-700 shadow-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   placeholder="e.g. BTC, HDFC MF"
                   required
                 />
@@ -188,16 +184,15 @@ export default function AssetForm({ token, onSaved, editing }) {
 
             {/* Full Name */}
             <div className="md:col-span-2 xl:col-span-2">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-2">
-                <Building2 className="w-4 h-4" />
+              <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <Building2 className="h-4 w-4" />
                 Full Name
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-700 shadow-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 placeholder="e.g. Reliance Industries Limited, Bitcoin"
                 required
               />
@@ -205,16 +200,15 @@ export default function AssetForm({ token, onSaved, editing }) {
 
             {/* Quantity */}
             <div>
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-2">
-                <Hash className="w-4 h-4" />
+              <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <Hash className="h-4 w-4" />
                 Quantity
               </label>
               <input
                 type="text"
                 value={formatNumber(quantity)}
                 onChange={(e) => setQuantity(formatNumber(e.target.value))}
-                className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 font-mono"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-mono text-slate-700 shadow-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 placeholder="1,000"
                 required
               />
@@ -222,18 +216,17 @@ export default function AssetForm({ token, onSaved, editing }) {
 
             {/* Avg Buy Price */}
             <div>
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-2">
-                <DollarSign className="w-4 h-4" />
+              <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <DollarSign className="h-4 w-4" />
                 Average Buy Price
               </label>
               <div className="relative">
-                <span className="absolute left-5 top-4 text-xl font-bold text-slate-600 dark:text-slate-400">₹</span>
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold text-slate-500 dark:text-slate-400">₹</span>
                 <input
                   type="text"
                   value={formatNumber(avgBuyPrice)}
                   onChange={(e) => setAvgBuyPrice(formatNumber(e.target.value))}
-                  className="w-full pl-12 pr-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                           focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 font-mono"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-10 pr-4 text-sm font-mono text-slate-700 shadow-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   placeholder="2,450.75"
                   required
                 />
@@ -242,45 +235,41 @@ export default function AssetForm({ token, onSaved, editing }) {
 
             {/* Sector */}
             <div>
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-2">
-                <Tag className="w-4 h-4" />
+              <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <Tag className="h-4 w-4" />
                 Sector / Category
               </label>
               <input
                 type="text"
                 value={sector}
                 onChange={(e) => setSector(e.target.value)}
-                className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200 capitalize"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm capitalize text-slate-700 shadow-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 placeholder="e.g. Technology, Banking"
               />
             </div>
 
             {/* Tags */}
             <div className="md:col-span-2 xl:col-span-1">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-2">
-                <Tag className="w-4 h-4" />
+              <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <Tag className="h-4 w-4" />
                 Tags (optional)
               </label>
               <input
                 type="text"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                className="w-full px-5 py-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 
-                         focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-700 shadow-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 placeholder="growth, dividend, long-term"
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Separate with commas</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Separate with commas</p>
             </div>
 
             {/* Submit & Feedback */}
-            <div className="md:col-span-2 xl:col-span-4 flex flex-col sm:flex-row items-center gap-6 mt-8">
+            <div className="mt-6 flex flex-col items-start gap-4 md:col-span-2 xl:col-span-4 sm:flex-row sm:items-center">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full sm:w-auto px-8 py-3 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500 font-semibold
-                         shadow-sm disabled:opacity-70 disabled:cursor-not-allowed
-                         flex items-center justify-center gap-3 transition-all"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:from-cyan-500 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
               >
                 {loading ? (
                   <>
@@ -298,14 +287,14 @@ export default function AssetForm({ token, onSaved, editing }) {
               {/* Messages */}
               <div className="flex-1" />
               {success && (
-                <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-bold text-lg animate-in slide-in-from-bottom duration-500">
-                  <CheckCircle2 className="w-7 h-7" />
+                <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                  <CheckCircle2 className="h-5 w-5" />
                   Asset saved successfully!
                 </div>
               )}
               {error && (
-                <div className="flex items-center gap-3 text-red-600 dark:text-red-400 font-medium animate-in fade-in duration-300">
-                  <AlertCircle className="w-6 h-6" />
+                <div className="flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-medium text-red-700 dark:bg-red-950/30 dark:text-red-400">
+                  <AlertCircle className="h-5 w-5" />
                   {error}
                 </div>
               )}

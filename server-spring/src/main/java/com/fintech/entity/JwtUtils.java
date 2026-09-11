@@ -1,6 +1,5 @@
 package com.fintech.entity;
 
-import com.fintech.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,16 +45,29 @@ public class JwtUtils {
                 .compact();
     }
 
+    private String normalizeToken(String token) {
+        if (token == null) {
+            return "";
+        }
+        String trimmed = token.trim();
+        if (trimmed.startsWith("Bearer ")) {
+            return trimmed.substring(7).trim();
+        }
+        return trimmed;
+    }
+
     // ------------------- Extract User from JWT -------------------
     public Optional<User> getUserFromToken(String token) {
         try {
-            if (token.startsWith("Bearer "))
-                token = token.substring(7);
+            String normalizedToken = normalizeToken(token);
+            if (normalizedToken.isBlank()) {
+                return Optional.empty();
+            }
 
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(getSigningKey())
                     .build()
-                    .parseClaimsJws(token)
+                    .parseClaimsJws(normalizedToken)
                     .getBody();
 
             Long userId = Long.parseLong(claims.getSubject());
@@ -85,13 +97,15 @@ public class JwtUtils {
     // ------------------- Validate JWT -------------------
     public boolean validateToken(String token) {
         try {
-            if (token.startsWith("Bearer "))
-                token = token.substring(7);
+            String normalizedToken = normalizeToken(token);
+            if (normalizedToken.isBlank()) {
+                return false;
+            }
 
             Jwts.parserBuilder()
                     .setSigningKey(getSigningKey())
                     .build()
-                    .parseClaimsJws(token);
+                    .parseClaimsJws(normalizedToken);
 
             return true;
         } catch (JwtException | IllegalArgumentException e) {

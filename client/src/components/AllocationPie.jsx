@@ -140,9 +140,10 @@ function AllocationPie({ data = [], onHover, onClick, hoveredSymbol: hoveredProp
     if (hovered && nameIndex.has(hovered)) {
       const idx = nameIndex.get(hovered);
       const v = chartData[idx].value;
-      return { title: chartData[idx].name, sub: `${((v / total) * 100).toFixed(1)}%` };
+      const pct = total > 0 ? Math.round((v / total) * 100) : 0;
+      return { title: chartData[idx].name, sub: `${pct}%` };
     }
-    return { title: 'Total', sub: `${total.toFixed(1)}%` };
+    return { title: 'Total', sub: `100%` };
   }, [hovered, nameIndex, chartData, total]);
 
   const wrapperClass = `${className ?? ''} h-80 w-full`;
@@ -159,9 +160,10 @@ function AllocationPie({ data = [], onHover, onClick, hoveredSymbol: hoveredProp
                   content={({ active, payload }) => {
                     if (!active || !payload || !payload.length) return null;
                     const p = payload[0];
+                    const percent = total > 0 ? Math.round((Number(p.value) / total) * 100) : 0;
                     return (
                       <ChartTooltip>
-                        <ChartTooltipContent name={p.name} value={`${Number(p.value).toFixed(1)}%`} />
+                        <ChartTooltipContent name={p.name} value={`${percent}%`} />
                       </ChartTooltip>
                     );
                   }}

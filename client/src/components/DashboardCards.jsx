@@ -38,9 +38,7 @@ export default function DashboardCards({ total, invested, pnl, returnPct, previo
   );
 }
 
-/* -------------------------- */
 /* Reusable Card Component     */
-/* -------------------------- */
 function Card({ title, children, value, compact = false }) {
   const isPositive = value === undefined ? undefined : value >= 0;
   const arrow = value === undefined ? '' : isPositive ? '▲' : '▼';

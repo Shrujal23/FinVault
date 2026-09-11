@@ -1,9 +1,23 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
+const API_BASE = (
+    import.meta.env.VITE_API_BASE ||
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:4000': 'http://localhost:4000')
+).replace(/\/$/, '');
+
+export function getStoredToken() {
+    return localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+}
+
+export function clearStoredAuth() {
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
+}
 
 export async function apiRequest(path, { method = 'GET', body, token: inputToken, signal } = {}) {
     const headers = { 'Content-Type': 'application/json' };
 
-    const token = inputToken || localStorage.getItem('token');
+    const token = inputToken || getStoredToken();
 
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -19,6 +33,9 @@ export async function apiRequest(path, { method = 'GET', body, token: inputToken
             signal
         });
     } catch (e) {
+        if (e?.name === 'AbortError') {
+            throw e;
+        }
         console.error('Network error', e);
         throw new Error('Could not reach API.');
     }
@@ -28,20 +45,22 @@ export async function apiRequest(path, { method = 'GET', body, token: inputToken
         console.error('API request failed', { path, status: res.status, body: err });
 
         if (res.status === 401 || res.status === 403) {
-            // Clear token and surface an error to the app instead of forcing a navigation.
-            // Let UI code decide how to redirect or show a sign-in modal.
-            localStorage.removeItem('token');
-            throw new Error('Unauthorized/Forbidden: Token missing, invalid, or expired.');
+            clearStoredAuth();
+            throw new Error(err?.error || 'Unauthorized: Token missing, invalid, or expired.');
         }
 
         if (res.status === 429) {
             const detail = err?.message || err?.error || 'Too many requests. Please wait a minute and try again.';
-            throw new Error(detail);
+            const rateLimitError = new Error(detail);
+            rateLimitError.status = 429;
+            rateLimitError.retryAfterSeconds = Number(res.headers.get('Retry-After')) || err?.retryAfterSeconds || 60;
+            throw rateLimitError;
         }
 
-        throw new Error(err?.error || `Request failed: ${res.status}`);
+        throw new Error(err?.error || err?.message || `Request failed: ${res.status}`);
     }
 
+    if (res.status === 204) return null;
     return await safeJson(res);
 }
 

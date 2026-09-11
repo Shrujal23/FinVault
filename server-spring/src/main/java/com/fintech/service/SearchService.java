@@ -76,7 +76,7 @@ public class SearchService {
                 return extractCryptoResults(response);
             }
         } catch (Exception e) {
-            logger.error("Crypto search failed for query '{}': {}", query, e.getMessage());
+            logger.error("Crypto search failed: {}", e.getMessage());
         }
         return getFallbackCrypto(query);
     }
@@ -97,11 +97,11 @@ public class SearchService {
             String response = restTemplate.getForObject(url, String.class);
             if (isValidResponse(response)) results = extractNseResults(response);
             if (!results.isEmpty()) {
-                logger.info("NSE search returned {} results for query '{}'", results.size(), query);
+                logger.info("NSE search returned {} results", results.size());
                 return deduplicateBySymbol(results);
             }
         } catch (Exception e) {
-            logger.warn("NSE search failed for query '{}', trying AlphaVantage fallback", query);
+            logger.warn("NSE search failed, trying AlphaVantage fallback");
         }
 
         List<Map<String, Object>> avResults = searchAlphaVantage(query);
@@ -126,9 +126,9 @@ public class SearchService {
                     }
                 }
             }
-            logger.info("AlphaVantage search returned {} results for '{}'", results.size(), query);
+            logger.info("AlphaVantage search returned {} results", results.size());
         } catch (Exception e) {
-            logger.warn("AlphaVantage search failed for query '{}': {}", query, e.getMessage());
+            logger.warn("AlphaVantage search failed: {}", e.getMessage());
         }
         return results;
     }
@@ -143,11 +143,11 @@ public class SearchService {
             if (isValidResponse(response)) results = extractYahooResults(response);
             if (!results.isEmpty()) {
                 enrichWithYahooPrices(results);
-                logger.info("Yahoo search returned {} results for query '{}'", results.size(), query);
+                logger.info("Yahoo search returned {} results", results.size());
                 return deduplicateBySymbol(results);
             }
         } catch (Exception e) {
-            logger.warn("Yahoo search failed for query '{}': {}", query, e.getMessage());
+                logger.warn("Yahoo search failed: {}", e.getMessage());
         }
         return results;
     }

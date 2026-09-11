@@ -21,8 +21,10 @@ function PerformanceChart({ token }) {
 
     async function fetchData() {
       try {
+        if (signal.aborted) return;
         setLoading(true);
         const res = await apiRequest('/api/snapshots', { token, signal });
+        if (signal.aborted) return;
         const formatted = (res.snapshots || []).map(s => ({
           date: s.as_of_date,
           value: Number(s.total_value_inr),
@@ -30,10 +32,12 @@ function PerformanceChart({ token }) {
         setData(formatted);
         setError('');
       } catch (e) {
-        if (e.name === 'AbortError') return;
+        if (e?.name === 'AbortError' || signal.aborted) return;
         setError(e.message || 'Failed to load performance data');
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     }
 

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,10 +43,16 @@ public class NewsService {
     }
 
     public Map<String, Object> fetchNews() throws Exception {
-        // Focus on Indian news by querying top Indian market movers instead of global topics
-        String indianTickers = "RELIANCE.BSE,TCS.BSE,HDFCBANK.BSE,INFY.BSE,ICICIBANK.BSE,SBIN.BSE,BHARTIARTL.BSE,ITC.BSE,LT.BSE,BAJFINANCE.BSE,AXISBANK.BSE,KOTAKBANK.BSE,MARUTI.BSE,TATAMOTORS.BSE,SUNPHARMA.BSE";
-        String url = newsBase + "?function=NEWS_SENTIMENT&tickers=" + indianTickers + "&apikey=" + alphavantageApiKey;
-        logger.debug("Fetching news URL: {}", url);
+        String url = UriComponentsBuilder.fromUriString(newsBase)
+                .queryParam("function", "NEWS_SENTIMENT")
+                .queryParam("topics", "financial_markets")
+                .queryParam("sort", "LATEST")
+                .queryParam("limit", 11)
+                .queryParam("apikey", alphavantageApiKey)
+                .build()
+                .encode()
+                .toUriString();
+        logger.debug("Fetching latest market news from Alpha Vantage");
         String response = restTemplate.getForObject(url, String.class);
         logger.debug("News raw response length: {}", response == null ? 0 : response.length());
 
@@ -66,7 +73,7 @@ public class NewsService {
                     if (item.get("title") != null && item.get("url") != null) {
                         articles.add(item);
                     }
-                    if (articles.size() >= 12) break; // cap to 12 for UI
+                    if (articles.size() >= 11) break; // caping this to 11 for UI fi in the dashboard to fit the cards
                 }
             } else {
                 logger.debug("News response did not contain 'feed' array. Returning raw response for debugging.");
@@ -75,13 +82,15 @@ public class NewsService {
         }
 
         // Fallback if API is rate-limited or returned no news
-        if (articles.isEmpty()) {
+        boolean usingFallback = articles.isEmpty();
+        if (usingFallback) {
             logger.info("No articles found from API (likely rate limited). Using fallback news.");
             articles = getFallbackNews();
         }
 
         Map<String, Object> resp = new HashMap<>();
         resp.put("articles", articles);
+        resp.put("source", usingFallback ? "fallback" : "live");
         if (newsDebug) {
             resp.put("debug", Map.of("source", "AlphaVantage", "rawLength", response == null ? 0 : response.length()));
             if (articles.isEmpty()) resp.put("error", "No articles found. Check server logs for raw response.");
