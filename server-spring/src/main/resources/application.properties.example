@@ -27,6 +27,7 @@ spring.jpa.properties.hibernate.format_sql=true
 jwt.secret=YOUR_JWT_SECRET_KEY_HERE
 
 jwt.expiration=7d
+security.password.bcrypt-strength=12
 
 # =======================
 # Rate limiting (per client IP, fixed 1-minute windows)
@@ -44,7 +45,7 @@ rate-limit.trust-x-forwarded-for=false
 # =======================
 cors.allowed-origins=http://localhost:5173,http://localhost:5174
 
-auth.return-reset-token=true
+auth.return-reset-token=false
 
 # =======================
 # External APIs

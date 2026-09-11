@@ -1,0 +1,10 @@
+.git
+.idea
+.vscode
+target/
+*.log
+HELP.md
+src/main/resources/application.properties
+src/main/resources/application-*.properties
+.env
+.env.*
