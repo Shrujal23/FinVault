@@ -6,7 +6,6 @@ import com.fintech.dto.UserDto;
 import com.fintech.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,19 +15,21 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173") 
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @Autowired
-    private JwtUtils jwtUtils;
+    private final JwtUtils jwtUtils;
 
     @Value("${auth.return-reset-token:false}")
     private boolean returnResetToken;
+
+    public AuthController(UserService userService, JwtUtils jwtUtils) {
+        this.userService = userService;
+        this.jwtUtils = jwtUtils;
+    }
 
     // Build a safe DTO to return to clients (excludes sensitive fields)
     private UserDto buildUserPayload(User user) {
@@ -43,8 +44,10 @@ public class AuthController {
 
         if (email == null || email.isBlank())
             return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
-        if (password == null || password.isBlank())
-            return ResponseEntity.badRequest().body(Map.of("error", "Password is required"));
+        if (password == null || password.isBlank()) {
+            final var body1 = ResponseEntity.badRequest().body(Map.of("error", "Password is required"));
+            return body1;
+        }
 
         try {
             userService.validatePasswordPolicy(password);
@@ -54,7 +57,7 @@ public class AuthController {
             logger.info("User registered: {}, Token issued", email);
 
                 return ResponseEntity.ok(Map.of(
-                    "message", "User registered successfully",
+                    "message", "User registered successfully!!!",
                     "token", token,
                     "user", buildUserPayload(user)
                 ));
@@ -105,10 +108,7 @@ public class AuthController {
         if (tokenOpt.isPresent()) {
             String resetToken = tokenOpt.get();
             logger.info("Password reset requested for: {}", email);
-            // In a real system, it will send an email with a link containing the token. For dev, log the link for manual testing.
-            logger.info("SIMULATING EMAIL: Reset link would be /reset-password/{}", resetToken);
             if (returnResetToken) {
-                // Return token in response for local dev convenience only
                 return ResponseEntity.ok(Map.of("message", "If an account with that email exists, a password reset link has been sent.", "resetToken", resetToken));
             }
         } else {
@@ -126,7 +126,7 @@ public class AuthController {
         }
 
         // Simulate SMS code flow — in production you'd lookup user by phone and send a code via SMS provider
-        logger.info("SIMULATING SMS: Reset code would be sent to phone: {}", phone);
+            logger.info("Password reset by phone requested");
         return ResponseEntity.ok(Map.of("message", "If an account with that phone exists, a reset code has been sent."));
     }
 

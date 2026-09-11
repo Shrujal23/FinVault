@@ -27,9 +27,12 @@ public class SecurityConfig {
     private JwtRequestFilter jwtRequestFilter;
 
     // ---------------- Password Encoder ----------------
+    @Value("${security.password.bcrypt-strength:12}")
+    private int bcryptStrength;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(bcryptStrength);
     }
 
     // ---------------- Authentication Manager ----------------
@@ -48,7 +51,8 @@ public class SecurityConfig {
         // support multiple comma-separated origins from application.properties
         config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("*"));
+        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
+        config.setExposedHeaders(Arrays.asList("Authorization"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -80,11 +84,13 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // Login/Register
-                .requestMatchers("/api/news/**").permitAll() // Public market news
-                .requestMatchers("/api/search/**").permitAll() // Public symbol search
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight
-                .anyRequest().authenticated() // Everything else requires JWT
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/news/**").permitAll()
+                .requestMatchers("/api/search/**").permitAll()
+                .requestMatchers("/api/contact/**").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .anyRequest().authenticated()
             )
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -1,11 +1,15 @@
 package com.fintech.controller;
 
 import com.fintech.service.SearchService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Collections;
 import java.util.Map;
 
 @RestController
@@ -14,27 +18,36 @@ public class SearchController {
 
     private static final Logger logger = LoggerFactory.getLogger(SearchController.class);
 
-    @Autowired
-    private SearchService searchService;
+    private final SearchService searchService;
 
-    // ---------------------- Search Stocks ----------------------
+    public SearchController(SearchService searchService) {
+        this.searchService = searchService;
+    }
+
     @GetMapping("/stocks")
     public ResponseEntity<?> searchStocks(@RequestParam(value = "q", required = false) String query) {
-        logger.info("Stock search requested with query: '{}'", query);
-        return ResponseEntity.ok(Map.of("results", searchService.searchStocks(query)));
+        logger.info("Stock search requested");
+        if (query == null || query.isBlank()) {
+            return ResponseEntity.ok(Map.of("results", Collections.emptyList()));
+        }
+        return ResponseEntity.ok(Map.of("results", searchService.searchStocks(query.trim())));
     }
 
-    // ---------------------- Search Crypto ----------------------
     @GetMapping("/crypto")
     public ResponseEntity<?> searchCrypto(@RequestParam(value = "q", required = false) String query) {
-        logger.info("Crypto search requested with query: '{}'", query);
-        return ResponseEntity.ok(Map.of("results", searchService.searchCrypto(query)));
+        logger.info("Crypto search requested");
+        if (query == null || query.isBlank()) {
+            return ResponseEntity.ok(Map.of("results", Collections.emptyList()));
+        }
+        return ResponseEntity.ok(Map.of("results", searchService.searchCrypto(query.trim())));
     }
 
-    // ---------------------- Search Mutual Funds ----------------------
     @GetMapping("/mutual")
     public ResponseEntity<?> searchMutualFunds(@RequestParam(value = "q", required = false) String query) {
-        logger.info("Mutual Fund search requested with query: '{}'", query);
-        return ResponseEntity.ok(Map.of("results", searchService.searchMutualFunds(query)));
+        logger.info("Mutual fund search requested");
+        if (query == null || query.isBlank()) {
+            return ResponseEntity.ok(Map.of("results", Collections.emptyList()));
+        }
+        return ResponseEntity.ok(Map.of("results", searchService.searchMutualFunds(query.trim())));
     }
 }
