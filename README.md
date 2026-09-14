@@ -11,6 +11,8 @@
 
 FinVault is a full-stack investment portfolio application for tracking assets, monitoring dividends, viewing market data, and analyzing portfolio performance.
 
+It is a personal portfolio tracker, not a brokerage, trading platform, or source of financial advice.
+
 ## Features
 
 - JWT authentication with Spring Security.
@@ -22,6 +24,8 @@ FinVault is a full-stack investment portfolio application for tracking assets, m
 - Per-user resource ownership checks and API rate limiting.
 - Request correlation IDs, request duration/status logging, and Actuator health monitoring.
 - Responsive React interface with Tailwind CSS, charts, and light/dark themes.
+
+Live prices are fetched for stocks and crypto when providers respond. Mutual funds, real estate, fixed deposits, and cash use values you enter. Dividends are tracked with manual entries. Performance charts and snapshots currently use generated demo data rather than stored daily valuations.
 
 ## Proposed Future Features
 
@@ -62,7 +66,12 @@ client/          React + Vite frontend
 server-spring/   Spring Boot REST API
 docker-compose.yaml
 nginx.conf       Reverse proxy configuration
+.env.example     Environment template for Docker Compose
 ```
+
+Architecture:
+
+- [HIGH_LEVEL_DESIGN.md](HIGH_LEVEL_DESIGN.md)
 
 ## Technology Stack
 
@@ -99,7 +108,7 @@ The Compose file is safe to commit. Real credentials belong in `.env`, which is 
 Copy-Item .env.example .env
 ```
 
-1. Replace the local placeholder passwords and generate a private JWT secret. For example, with Git Bash or WSL:
+2. Replace the local placeholder passwords and generate a private JWT secret. For example, with Git Bash or WSL:
 
 ```bash
 openssl rand -base64 64
@@ -107,33 +116,36 @@ openssl rand -base64 64
 
 Put the generated value in `.env` as `JWT_SECRET`.
 
-1. Validate the Compose configuration:
+3. Validate the Compose configuration:
 
 ```powershell
 docker compose config --quiet
 ```
 
-1. Build and start the application:
+4. Build and start the application:
 
 ```powershell
 docker compose up --build -d
 ```
 
-1. Open the application at:
+5. Open the application at:
 
 ```text
 http://localhost
 ```
 
-1. Check service health:
+6. Check service health:
 
 ```powershell
-Invoke-WebRequest http://localhost/actuator/health
 docker compose ps
 docker compose logs -f backend
 ```
 
-1. Stop the stack:
+Nginx on port 80 proxies `/api/` to Spring Boot and everything else to the React app. The backend port is not published on the host. MySQL is published on host port `3307` so it does not collide with a local MySQL install on `3306`.
+
+Without Docker, Actuator is available at `http://localhost:4000/actuator/health`.
+
+7. Stop the stack:
 
 ```powershell
 docker compose down
@@ -183,7 +195,7 @@ npm ci
 npm run dev
 ```
 
-The development frontend runs at `http://localhost:5173`.
+The development frontend runs at `http://localhost:5173`. Vite talks to the API using the value in `VITE_API_BASE` when set; otherwise the client uses the local backend origin.
 
 ## Useful API Endpoints
 
@@ -192,6 +204,7 @@ Authentication:
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/forgot-password`
+- `GET /api/auth/reset-password/validate`
 - `POST /api/auth/reset-password`
 
 Portfolio:
@@ -212,8 +225,33 @@ Watchlists and dividends:
 - `GET /api/dividends`
 - `POST /api/dividends`
 - `PUT /api/dividends/{id}`
+- `DELETE /api/dividends/{id}`
 
-Public market endpoints include `/api/news/**`, `/api/search/**`, and `/api/contact`.
+Account:
+
+- `GET /api/user/profile`
+- `PUT /api/user/profile`
+
+Public market endpoints include `/api/news/**`, `/api/search/**`, `/api/sentiment`, and `/api/contact`.
+
+Protected routes require `Authorization: Bearer <token>`. Assets, watchlist items, and dividends are scoped to the authenticated user.
+
+## Environment Variables
+
+Used by Docker Compose. Local development without Docker uses `application.properties` instead.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `MYSQL_DATABASE` | No (default `fintech_portfolio`) | Application database name |
+| `MYSQL_USERNAME` | Yes | MySQL application user |
+| `MYSQL_PASSWORD` | Yes | MySQL application password |
+| `MYSQL_ROOT_PASSWORD` | Yes | MySQL root password |
+| `JWT_SECRET` | Yes | Long Base64 secret used to sign JWTs |
+| `JWT_EXPIRATION` | No (default `1d`) | Access-token lifetime |
+| `CORS_ALLOWED_ORIGINS` | No (default `http://localhost`) | Allowed browser origins |
+| `AUTH_RETURN_RESET_TOKEN` | No (default `false`) | Return reset tokens in API responses; local debugging only |
+| `ALPHAVANTAGE_API_KEY` | No | Optional market-data key |
+| `COINGECKO_API_KEY` | No | Optional crypto-data key |
 
 ## Monitoring and Logs
 
@@ -223,6 +261,12 @@ The backend exposes only these unauthenticated Actuator endpoints:
 - `GET /actuator/info`
 
 Each request receives an `X-Request-Id` response header. Use it to find the matching request in backend logs. Logs include the HTTP method, path, status code, and duration, but do not log passwords, JWTs, reset tokens, or search values.
+
+Without Docker:
+
+```text
+http://localhost:4000/actuator/health
+```
 
 With Docker:
 
@@ -238,6 +282,7 @@ docker compose logs -f backend
 - Set `spring.jpa.show-sql=false` and use a managed migration strategy outside local development.
 - Do not enable `AUTH_RETURN_RESET_TOKEN` outside local development.
 - Keep the database application user separate from the MySQL root user.
+- Rate limiting is in-memory per process. Horizontal scaling would need a shared store.
 
 ## Verification Commands
 
@@ -264,3 +309,16 @@ Commit these files when changing containerization:
 - `server-spring/Dockerfile`
 - `server-spring/.dockerignore`
 - `.env.example`
+
+Do not commit:
+
+- `.env`
+- `server-spring/src/main/resources/application.properties`
+- `node_modules/`
+- `server-spring/target/`
+- `client/dist/`
+- database volumes, secrets, or API keys
+
+## License
+
+This project is provided for educational and personal portfolio use. It does not execute trades, store brokerage credentials, or give investment advice.
