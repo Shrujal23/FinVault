@@ -1,11 +1,11 @@
 # FinVault
 
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3.2-6DB33F?style=flat-square&logo=spring-boot&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.16-6DB33F?style=flat-square&logo=spring-boot&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.4-4479A1?style=flat-square&logo=mysql&logoColor=white)
-![React](https://img.shields.io/badge/React-18-20232A?style=flat-square&logo=react&logoColor=61DAFB)
-![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![React](https://img.shields.io/badge/React-19-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
 ![JWT](https://img.shields.io/badge/JWT-authentication-black?style=flat-square&logo=jsonwebtokens&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)
 
@@ -76,10 +76,10 @@ Architecture:
 ## Technology Stack
 
 - Java 17
-- Spring Boot 3.3.2
+- Spring Boot 3.5.16
 - Spring Security, Spring Data JPA, Hibernate
 - MySQL 8.4 in Docker
-- React 18 and Vite
+- React 19, Vite 8, Tailwind CSS 4, React Router 7
 - Tailwind CSS and Recharts
 - JWT
 - Docker Compose and Nginx
@@ -234,7 +234,7 @@ Account:
 
 Public market endpoints include `/api/news/**`, `/api/search/**`, `/api/sentiment`, and `/api/contact`.
 
-Protected routes require `Authorization: Bearer <token>`. Assets, watchlist items, and dividends are scoped to the authenticated user.
+Protected routes require `Authorization: Bearer <token>`. Assets and watchlist items are scoped to the authenticated user. Dividend rows currently require authentication but are **not** yet filtered per user in the database—see [`explain.md`](explain.md) and [`SECURITY.md`](SECURITY.md).
 
 ## Environment Variables
 
@@ -296,29 +296,3 @@ git diff --check
 ## Contributing
 
 Contributions are welcome. Before opening an issue or pull request, please check the existing project documentation and code and search for related work. For code changes, create a focused branch, describe the user or security problem being solved, and include relevant tests or verification steps.
-
-## Repository Hygiene
-
-Commit these files when changing containerization:
-
-- `docker-compose.yaml`
-- `nginx.conf`
-- `client/Dockerfile`
-- `client/nginx.conf`
-- `client/.dockerignore`
-- `server-spring/Dockerfile`
-- `server-spring/.dockerignore`
-- `.env.example`
-
-Do not commit:
-
-- `.env`
-- `server-spring/src/main/resources/application.properties`
-- `node_modules/`
-- `server-spring/target/`
-- `client/dist/`
-- database volumes, secrets, or API keys
-
-## License
-
-This project is provided for educational and personal portfolio use. It does not execute trades, store brokerage credentials, or give investment advice.

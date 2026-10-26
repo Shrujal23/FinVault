@@ -1,9 +1,8 @@
+@import "tailwindcss";
+@config "../../tailwind.config.js";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 html, body, #root { height: 100%; }
 
