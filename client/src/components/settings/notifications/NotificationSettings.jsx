@@ -50,24 +50,18 @@ export default function NotificationSettings({
   setDividend,
   weekly,
   setWeekly,
+  showIntro = false,
 }) {
   return (
-    <div className="max-w-2xl p-4 sm:p-6">
+    <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
 
-      <div className="mb-6">
-
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-          Notification Settings
-        </h2>
-
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Control how FinVault keeps you informed about your
-          portfolio activity.
+      {showIntro && (
+        <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+          Preferences are stored in your browser for this demo.
         </p>
+      )}
 
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden divide-y divide-slate-200 dark:divide-slate-700">
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900/50 divide-y divide-slate-200/80 dark:divide-slate-800">
 
         <ToggleRow
           label="Price Movement Alerts"

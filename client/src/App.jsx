@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { LogIn, ShieldCheck } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 
@@ -65,32 +65,40 @@ function ResetPasswordRoute() {
   return <ResetPasswordForm token={token} onDone={() => {}} />;
 }
 
-export default function App() {
+function AppRoutes() {
   const { token } = useAuth();
+  const { pathname } = useLocation();
+  const isDashboard = pathname === '/';
 
   return (
+    <main className="flex-grow w-full">
+      <div className={isDashboard ? 'w-full' : 'max-w-7xl mx-auto w-full px-3 sm:px-4 md:px-6 lg:px-8 py-6'}>
+        <Suspense fallback={<SuspenseFallback />}>
+          <Routes>
+            <Route path="/auth" element={token ? <Navigate to="/" replace /> : <AuthPage />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordRoute />} />
+
+            <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/dividends" element={<PrivateRoute><DividendMonitor /></PrivateRoute>} />
+            <Route path="/billing" element={<PrivateRoute><Billing /></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </div>
+    </main>
+  );
+}
+
+export default function App() {
+  return (
     <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <BrowserRouter>
         <Navbar />
-        <main className="flex-grow w-full">
-          <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 md:px-6 lg:px-8 py-6">
-            <Suspense fallback={<SuspenseFallback />}>
-              <Routes>
-                <Route path="/auth" element={token ? <Navigate to="/" replace /> : <AuthPage />} />
-                <Route path="/about" element={<AboutUs />} />
-                <Route path="/contact" element={<ContactPage />} />
-                <Route path="/reset-password/:token" element={<ResetPasswordRoute />} />
-
-                <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-                <Route path="/dividends" element={<PrivateRoute><DividendMonitor /></PrivateRoute>} />
-                <Route path="/billing" element={<PrivateRoute><Billing /></PrivateRoute>} />
-                <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
-
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
-          </div>
-        </main>
+        <AppRoutes />
         <Footer />
       </BrowserRouter>
     </div>

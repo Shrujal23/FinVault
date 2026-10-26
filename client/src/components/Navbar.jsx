@@ -5,7 +5,6 @@ import {
   X,
   Settings,
   LogOut,
-  ChevronDown,
   Home,
   Info,
   Mail,
@@ -17,6 +16,9 @@ import { useTheme } from "../pages/ThemeContext";
 import DarkModeToggle from "./DarkModeToggle.jsx";
 import { useAuth } from "../hooks/useAuth";
 import useAppNavigate from "../hooks/useAppNavigate";
+import { SmoothDropdownPanel } from "@/components/ui/SmoothSelect.jsx";
+import ConfirmDialog from "@/components/ui/ConfirmDialog.jsx";
+import { getUserInitials } from "@/lib/userInitials.js";
 
 export default function Navbar() {
   const { token, user, logout } = useAuth();
@@ -25,11 +27,12 @@ export default function Navbar() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const dropdownRef = useRef();
   const { theme } = useTheme();
 
   const userName = user?.name || user?.email?.split("@")[0] || "User";
-  const userInitials = userName[0]?.toUpperCase();
+  const userInitials = getUserInitials(user?.name || user?.email || userName);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -54,9 +57,14 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   }, [goTo]);
 
-  const handleLogout = useCallback(() => {
-    logout();
+  const requestLogout = useCallback(() => {
+    setLogoutConfirmOpen(true);
     setShowUserDropdown(false);
+  }, []);
+
+  const confirmLogout = useCallback(() => {
+    setLogoutConfirmOpen(false);
+    logout();
     setMobileMenuOpen(false);
     navigate("/auth");
   }, [logout, navigate]);
@@ -110,55 +118,43 @@ export default function Navbar() {
 
               {token && (
                 <div className="flex items-center gap-2">
+                  <DarkModeToggle />
                   <div ref={dropdownRef} className="relative">
                     <button
                       type="button"
+                      aria-label={`Account menu for ${userName}`}
+                      aria-expanded={showUserDropdown}
+                      aria-haspopup="menu"
                       onClick={() => setShowUserDropdown(!showUserDropdown)}
-                      className="flex items-center gap-2 sm:gap-3 pl-2 pr-3 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-600/10 hover:from-cyan-500/20 hover:to-blue-600/20 border border-cyan-200/50 dark:border-cyan-800/50 transition-all duration-300 max-w-[200px]"
+                      className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-sm font-semibold text-white shadow-md ring-2 ring-transparent transition hover:brightness-110 focus:outline-none focus:ring-cyan-500/40 ${showUserDropdown ? 'ring-cyan-500/50' : ''}`}
                     >
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-lg shrink-0">
-                        {userInitials}
-                      </div>
-                      <span className="font-medium text-gray-800 dark:text-gray-200 truncate hidden sm:block">{userName}</span>
-                      <ChevronDown className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform duration-200 shrink-0 ${showUserDropdown ? "rotate-180" : ""}`} />
+                      {userInitials}
                     </button>
 
-                    {showUserDropdown && (
-                      <div className="absolute right-0 mt-3 w-64 sm:w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden z-50">
-                        <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-slate-800">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-xl shrink-0">
-                              {userInitials}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-gray-900 dark:text-white truncate">{userName}</p>
-                              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="py-2">
-                          <button
-                            type="button"
-                            onClick={goSettings}
-                            className="w-full flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-left"
-                          >
-                            <Settings className="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0" />
-                            <div className="min-w-0">
-                              <span className="font-medium text-gray-900 dark:text-white block">Account settings</span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">Profile, brokers, alerts, security</span>
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-left text-red-600 dark:text-red-400"
-                          >
-                            <LogOut className="w-5 h-5 shrink-0" />
-                            <span className="font-medium">Log out</span>
-                          </button>
-                        </div>
+                    <SmoothDropdownPanel open={showUserDropdown} className="w-56">
+                      <div className="border-b border-slate-200/80 px-4 py-3 dark:border-slate-700/80">
+                        <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{userName}</p>
+                        <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
                       </div>
-                    )}
+                      <div className="p-1">
+                        <button
+                          type="button"
+                          onClick={goSettings}
+                          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/80"
+                        >
+                          <Settings className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                          Settings
+                        </button>
+                        <button
+                          type="button"
+                          onClick={requestLogout}
+                          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                        >
+                          <LogOut className="h-4 w-4 shrink-0" />
+                          Log out
+                        </button>
+                      </div>
+                    </SmoothDropdownPanel>
                   </div>
                 </div>
               )}
@@ -232,7 +228,7 @@ export default function Navbar() {
                   </button>
                   <button
                     type="button"
-                    onClick={handleLogout}
+                    onClick={requestLogout}
                     className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors font-medium"
                   >
                     <LogOut className="w-5 h-5" />
@@ -248,6 +244,17 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-hidden="true" onClick={() => setMobileMenuOpen(false)} />
       )}
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        title="Log out?"
+        description="You'll need to sign in again to view your portfolio. Any unsaved work in open forms may be lost."
+        confirmLabel="Log out"
+        cancelLabel="Stay signed in"
+        danger
+        onConfirm={confirmLogout}
+        onCancel={() => setLogoutConfirmOpen(false)}
+      />
     </>
   );
 }

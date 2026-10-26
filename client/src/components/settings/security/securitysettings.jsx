@@ -4,11 +4,12 @@ export default function SecuritySettings({
   auth,
   onClose,
   setCurrentPage,
+  onRequestSignOut,
 }) {
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-xl">
+    <div className="mx-auto max-w-2xl space-y-4 px-4 py-6 sm:px-6 sm:py-8">
       {/* Password */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/70 p-4 sm:p-5 space-y-4">
+      <div className="rounded-xl border border-slate-200/80 bg-white p-4 sm:p-5 dark:border-slate-800 dark:bg-slate-900/50">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
             <Lock className="w-5 h-5 text-slate-600 dark:text-slate-400" />
@@ -26,21 +27,17 @@ export default function SecuritySettings({
 
             <button
               type="button"
-              onClick={() => {
-                onClose?.();
-                auth?.logout?.();
-                setCurrentPage?.("home");
-              }}
-              className="mt-4 text-sm font-semibold text-cyan-600 hover:underline dark:text-cyan-400"
+              onClick={() => onRequestSignOut?.()}
+              className="mt-4 text-sm font-medium text-cyan-700 hover:underline dark:text-cyan-400"
             >
-              Sign out and open login
+              Sign out
             </button>
           </div>
         </div>
       </div>
 
       {/* Two Factor Authentication */}
-      <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/30 p-4 sm:p-5 flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-4 sm:p-5 dark:border-slate-600 dark:bg-slate-800/20">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
             <Shield className="w-5 h-5 text-slate-600 dark:text-slate-400" />
